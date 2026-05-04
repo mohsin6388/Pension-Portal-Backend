@@ -4,14 +4,14 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
-const { initDatabase } = require("./config/database");
+const { initDatabase } = require("./src/config/database");
 
 // ── Routes ────────────────────────────────────────────────────────────────────
-const authRoutes           = require("./routes/auth");
-const pensionerRoutes      = require("./routes/pensioners");
-const pensionActionRoutes  = require("./routes/pensionActions");
-const userRoutes           = require("./routes/users");
-const documentRoutes       = require("./routes/documents");
+const authRoutes           = require("./src/routes/auth");
+const pensionerRoutes      = require("./src/routes/pensioners");
+const pensionActionRoutes  = require("./src/routes/pensionActions");
+const userRoutes           = require("./src/routes/users");
+const documentRoutes       = require("./src/routes/documents");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
