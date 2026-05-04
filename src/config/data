@@ -1,0 +1,152 @@
+CREATE TABLE departments (
+  id SERIAL PRIMARY KEY,
+  department_name VARCHAR(100) NOT NULL UNIQUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- INSERT INTO departments (department_name) VALUES
+-- ('Public Works'), ('Health'), ('Education'), ('Finance'), ('Sanitation');
+
+
+
+
+--=============== Designation ===============
+
+CREATE TABLE designations (
+  id SERIAL PRIMARY KEY,
+  designation_name VARCHAR(100) NOT NULL UNIQUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO designations (designation_name) VALUES
+('Junior Engineer'), ('Clerk'), ('Supervisor'), ('Officer');
+
+
+
+-- =============== Employee ===============
+-- CREATE TABLE employee_pensioner (
+--   id               INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+--   employee_id      VARCHAR(20)  NOT NULL UNIQUE,
+--   ppo_no           VARCHAR(30),
+
+--   department_id    INT NOT NULL,
+--   designation_id   INT NOT NULL,
+
+--   aadhaar_no       VARCHAR(14) UNIQUE,
+--   pan_no           VARCHAR(10) UNIQUE,
+
+--   date_of_birth    DATE NOT NULL,
+--   date_of_joining  DATE,
+--   retirement_date  DATE NOT NULL,
+--   date_of_death    DATE,
+
+--   gender           VARCHAR(10) NOT NULL CHECK (gender IN ('Male','Female','Other')),
+--   emp_category     VARCHAR(1)  NOT NULL CHECK (emp_category IN ('A','B','C','D')),
+
+--   grade_pay        NUMERIC(10,2) NOT NULL,
+--   last_salary_drawn NUMERIC(10,2),
+
+--   caste_category   VARCHAR(10) CHECK (caste_category IN ('General','OBC','SC','ST')),
+
+--   dependent_name   VARCHAR(150),
+
+--   mobile_no        VARCHAR(10) NOT NULL,
+--   family_mobile_no VARCHAR(10),
+
+--   created_at       TIMESTAMPTZ DEFAULT NOW(),
+--   updated_at       TIMESTAMPTZ DEFAULT NOW(),
+
+--   FOREIGN KEY (department_id)  REFERENCES departments(id),
+--   FOREIGN KEY (designation_id) REFERENCES designations(id)
+-- );
+
+
+
+--============== Pension Category ===============
+
+-- CREATE TABLE pension_category (
+--   id                  INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+
+--   employee_id         INT NOT NULL UNIQUE,
+
+--   category_type       VARCHAR(20) NOT NULL 
+--                       CHECK (category_type IN ('Self','Family','Disability','Other')),
+
+--   category_pct        INT NOT NULL 
+--                       CHECK (category_pct IN (100, 90, 75)),
+
+--   acp                 BOOLEAN,
+--   notional_increment  BOOLEAN,
+
+--   pfms                VARCHAR(50),
+
+--   created_at          TIMESTAMPTZ DEFAULT NOW(),
+
+--   FOREIGN KEY (employee_id) 
+--   REFERENCES employee_pensioner(id)
+-- );
+
+
+--============== Bank Details ===============
+-- CREATE TABLE bank_details (
+--   id           INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+
+--   employee_id  INT NOT NULL,
+
+--   bank_name    VARCHAR(100),
+--   ifsc_code    VARCHAR(11),
+--   micr         VARCHAR(9),
+
+--   bank_ac_no   VARCHAR(30) UNIQUE,
+
+--   ac_type      VARCHAR(20) CHECK (ac_type IN ('Savings','Current')),
+
+--   is_primary   BOOLEAN DEFAULT TRUE,
+
+--   created_at   TIMESTAMPTZ DEFAULT NOW(),
+
+--   FOREIGN KEY (employee_id)
+--     REFERENCES employee_pensioner(id)
+-- );
+
+
+
+--============== Eployee Address ===============
+-- CREATE TABLE employee_address (
+--   id                     INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+
+--   employee_id            INT NOT NULL UNIQUE,
+
+--   permanent_address      TEXT,
+--   correspondence_address TEXT,
+
+--   pin_code               VARCHAR(6),
+
+--   created_at             TIMESTAMPTZ DEFAULT NOW(),
+
+--   FOREIGN KEY (employee_id)
+--     REFERENCES employee_pensioner(id)
+-- );
+
+
+--============== Employee Documents ===============
+-- CREATE TABLE employee_documents (
+--   id                      INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+
+--   employee_id             INT NOT NULL UNIQUE,
+
+--   photo_path              VARCHAR(255),
+--   signature_path          VARCHAR(255),
+--   salary_slip_path        VARCHAR(255),
+--   death_certificate_path  VARCHAR(255),
+
+--   created_at              TIMESTAMPTZ DEFAULT NOW(),
+--   updated_at              TIMESTAMPTZ DEFAULT NOW(),
+
+--   FOREIGN KEY (employee_id)
+--     REFERENCES employee_pensioner(id)
+-- );
+
+
+--Mohsin@098765432
+--Mohsin@098765
