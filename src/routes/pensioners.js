@@ -6,6 +6,7 @@ const {
   createPensioner,
   getDepartmentPensioners,
   getAdminPendingPensioners,
+  handleAdminAllRecords,
   handleAdminAction,
   updatePensioner,
   getStats,
@@ -26,6 +27,7 @@ router.get("/:id", getPensioner);
 router.get("/admin/pending", getAdminPendingPensioners);
 
 router.post("/action", handleAdminAction);
+router.get("/admin/records", handleAdminAllRecords)
 
 
 // router.post("/", authorize("admin", "clerk"), auditLog("CREATE_PENSIONER"), createPensioner);

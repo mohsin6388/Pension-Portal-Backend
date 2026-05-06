@@ -10,6 +10,18 @@ const pool = new Pool({
   },
 });
 
+// const pool = new Pool({
+//   host: "localhost",
+//   port:  5432,
+//   database: "Pension_System",
+//   user: "postgres",
+//   // password: process.env.DB_PASSWORD || '',
+//   password: "Mohsin@123",
+//   max: 20,
+//   idleTimeoutMillis: 30000,
+//   connectionTimeoutMillis: 2000,
+// });
+
 pool.on("connect", () => {
   console.log("✅ Connected to PostgreSQL database");
 });
@@ -217,7 +229,6 @@ async function getPensioner(req, res) {
   }
 }
 
-module.exports = { getPensioner };
 
 // function getPensioner(req, res) {
 //   try {
@@ -447,6 +458,11 @@ async function createPensioner(req, res) {
   }
 }
 
+
+//Admin Routes Functions =======================
+//================================================
+
+
 async function getAdminPendingPensioners(req, res) {
   const client = await pool.connect();
 
@@ -529,6 +545,8 @@ async function getAdminPendingPensioners(req, res) {
       LEFT JOIN employee_documents ed 
         ON ep.id = ed.employee_id
 
+      WHERE LOWER(ep.status) = 'pending'
+
       ORDER BY ep.id DESC;
     `;
 
@@ -603,6 +621,97 @@ async function getAdminPendingPensioners(req, res) {
   //    client.release();
   //  }
 }
+
+async function handleAdminAllRecords(req, res) {
+  try {
+    const query = `
+      SELECT 
+        ep.id,
+        ep.employee_id,
+        ep.ppo_no,
+
+        ep.aadhaar_no,
+        ep.pan_no,
+        ep.date_of_birth,
+        ep.date_of_joining,
+        ep.retirement_date,
+        ep.date_of_death,
+
+        ep.gender,
+        ep.emp_category,
+        ep.grade_pay,
+        ep.last_salary_drawn,
+        ep.caste_category,
+        ep.status, 
+
+        ep.dependent_name,
+        ep.mobile_no,
+        ep.family_mobile_no,
+
+        d.department_name,
+        des.designation_name,
+
+        pc.category_type,
+        pc.category_pct,
+        pc.acp,
+        pc.notional_increment,
+        pc.pfms,
+
+        bd.bank_name,
+        bd.ifsc_code,
+        bd.bank_ac_no,
+        bd.ac_type,
+
+        ea.permanent_address,
+        ea.correspondence_address,
+        ea.pin_code,
+
+        ed.photo_path,
+        ed.signature_path,
+        ed.salary_slip_path,
+        ed.death_certificate_path
+
+      FROM employee_pensioner ep
+
+      JOIN departments d 
+        ON ep.department_id = d.id
+
+      JOIN designations des 
+        ON ep.designation_id = des.id
+
+      LEFT JOIN pension_category pc 
+        ON ep.id = pc.employee_id
+
+      LEFT JOIN bank_details bd 
+        ON ep.id = bd.employee_id
+
+      LEFT JOIN employee_address ea 
+        ON ep.id = ea.employee_id
+
+      LEFT JOIN employee_documents ed 
+        ON ep.id = ed.employee_id
+
+      ORDER BY ep.id DESC;
+    `;
+
+    const result = await pool.query(query);
+
+    return res.status(200).json({
+      success: true,
+      count: result.rows.length,
+      data: result.rows,
+    });
+  } catch (error) {
+    console.error("Error fetching employees:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+
+}
+
 
 async function handleAdminAction(req, res) {
   const { ppo_no, action, remark, user } = req.body;
@@ -1084,6 +1193,7 @@ module.exports = {
   createPensioner,
   getDepartmentPensioners,
   getAdminPendingPensioners,
+  handleAdminAllRecords,
   handleAdminAction,
   updatePensioner,
   getStats,
