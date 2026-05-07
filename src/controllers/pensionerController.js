@@ -346,7 +346,7 @@ async function createPensioner(req, res) {
         gender, emp_category,
         grade_pay, last_salary_drawn,
         caste_category, relation, relation_name,
-        mobile_no, family_mobile_no, employee_name,
+        mobile_no, family_mobile_no, employee_name
       )
       VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
@@ -373,7 +373,7 @@ async function createPensioner(req, res) {
         body.relationName,
         body.mobile,
         body.familyMobile,
-        body.employeeName,
+        body.employeeName
       ],
     );
 
@@ -1089,6 +1089,7 @@ async function getDepartmentPensioners(req, res) {
       SELECT 
         ep.id,
         ep.employee_id,
+        ep.employee_name,
         ep.ppo_no,
 
         d.department_name,
@@ -1118,6 +1119,7 @@ async function getDepartmentPensioners(req, res) {
     const data = result.rows.map((row) => ({
       id: row.id,
       employeeId: row.employee_id,
+      employee_name: row.employee_name,
       ppoNo: row.ppo_no,
       name: row.employee_id, // ⚠️ you don’t have name column in DB
       department: row.department_name,
@@ -1127,7 +1129,10 @@ async function getDepartmentPensioners(req, res) {
       categoryType: row.category_type,
       gender: row.gender,
       status: row.status,
+  
     }));
+
+    console.log(data)
 
     res.json({
       success: true,
