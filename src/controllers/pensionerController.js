@@ -116,7 +116,8 @@ async function getPensioner(req, res) {
         ep.grade_pay,
         ep.last_salary_drawn,
         ep.caste_category,
-        ep.dependent_name,
+        ep.relation,
+        ep.relation_name,
 
         ep.mobile_no,
         ep.family_mobile_no,
@@ -187,7 +188,8 @@ async function getPensioner(req, res) {
       lastSalary: row.last_salary_drawn,
 
       caste: row.caste_category,
-      dependentName: row.dependent_name,
+      relation: row.relation,
+      relationName: row.relation_name,
 
       mobile: row.mobile_no,
       familyMobile: row.family_mobile_no,
@@ -266,6 +268,8 @@ async function uploadToCloudinary(file, folder) {
 async function createPensioner(req, res) {
   const client = await pool.connect();
 
+  console.log(req.body)
+
   try {
     const body = req.body;
 
@@ -276,7 +280,8 @@ async function createPensioner(req, res) {
       !body.employeeId ||
       !body.department ||
       !body.designation ||
-      !body.retirementDate
+      !body.retirementDate ||
+      !body.employeeName 
     ) {
       return res.status(400).json({
         success: false,
@@ -327,7 +332,7 @@ async function createPensioner(req, res) {
       );
       const count = parseInt(countRes.rows[0].count) + 1;
 
-      ppoNo = `KMC/${year}/${String(count).padStart(3, "0")}`;
+      ppoNo = `100/${year}/${String(count).padStart(3, "0")}`;
     }
 
     // =========================
@@ -340,12 +345,12 @@ async function createPensioner(req, res) {
         date_of_birth, date_of_joining, retirement_date, date_of_death,
         gender, emp_category,
         grade_pay, last_salary_drawn,
-        caste_category, dependent_name,
+        caste_category, relation, relation_name,
         mobile_no, family_mobile_no
       )
       VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
-        $11,$12,$13,$14,$15,$16,$17,$18
+        $11,$12,$13,$14,$15,$16,$17,$18,$19
       )
       RETURNING id`,
       [
@@ -364,7 +369,8 @@ async function createPensioner(req, res) {
         Number(body.gradePay),
         Number(body.lastSalary),
         body.caste,
-        body.dependentName,
+        body.relation,
+        body.relationName,
         body.mobile,
         body.familyMobile,
       ],
@@ -486,7 +492,8 @@ async function getAdminPendingPensioners(req, res) {
         ep.grade_pay,
         ep.last_salary_drawn,
         ep.caste_category,
-        ep.dependent_name,
+        ep.relation,
+        ep.relation_name,
         ep.mobile_no,
         ep.family_mobile_no,
 
@@ -644,7 +651,8 @@ async function handleAdminAllRecords(req, res) {
         ep.caste_category,
         ep.status, 
 
-        ep.dependent_name,
+        ep.relation,
+        ep.relation_name,
         ep.mobile_no,
         ep.family_mobile_no,
 
