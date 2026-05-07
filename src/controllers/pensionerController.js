@@ -112,7 +112,6 @@ async function getPensioner(req, res) {
         ep.date_of_death,
 
         ep.gender,
-        ep.emp_category,
         ep.grade_pay,
         ep.last_salary_drawn,
         ep.caste_category,
@@ -123,7 +122,6 @@ async function getPensioner(req, res) {
         ep.family_mobile_no,
 
         pc.category_type,
-        pc.category_pct,
         pc.acp,
         pc.notional_increment,
         pc.pfms,
@@ -182,8 +180,6 @@ async function getPensioner(req, res) {
       dod: row.date_of_death,
 
       gender: row.gender,
-      empCategory: row.emp_category,
-
       gradePay: row.grade_pay,
       lastSalary: row.last_salary_drawn,
 
@@ -195,7 +191,7 @@ async function getPensioner(req, res) {
       familyMobile: row.family_mobile_no,
 
       categoryType: row.category_type,
-      categoryPct: row.category_pct,
+      // categoryPct: row.category_pct,
       acp: row.acp ? "Y" : "N",
       notionalIncrement: row.notional_increment ? "Y" : "N",
       pfms: row.pfms,
@@ -343,14 +339,14 @@ async function createPensioner(req, res) {
         employee_id, ppo_no, department_id, designation_id,
         aadhaar_no, pan_no,
         date_of_birth, date_of_joining, retirement_date, date_of_death,
-        gender, emp_category,
+        gender,
         grade_pay, last_salary_drawn,
         caste_category, relation, relation_name,
         mobile_no, family_mobile_no, employee_name
       )
       VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
-        $11,$12,$13,$14,$15,$16,$17,$18,$19,$20
+        $11,$12,$13,$14,$15,$16,$17,$18,$19
       )
       RETURNING id`,
       [
@@ -365,7 +361,6 @@ async function createPensioner(req, res) {
         body.retirementDate,
         body.dod || null,
         body.gender,
-        body.empCategory,
         Number(body.gradePay),
         Number(body.lastSalary),
         body.caste,
@@ -404,14 +399,14 @@ async function createPensioner(req, res) {
     // =========================
     await client.query(
       `INSERT INTO pension_category (
-        employee_id, category_type, category_pct,
+        employee_id, category_type, 
         acp, notional_increment, pfms
       )
-      VALUES ($1,$2,$3,$4,$5,$6)`,
+      VALUES ($1,$2,$3,$4,$5)`,
       [
         employeeId,
         body.categoryType,
-        Number(body.categoryPct),
+        // Number(body.categoryPct),
         body.acp === "Y",
         body.notionalIncrement === "Y",
         body.pfms,
@@ -482,6 +477,7 @@ async function getAdminPendingPensioners(req, res) {
         ep.id,
         ep.ppo_no,
         ep.employee_id,
+        ep.employee_name,
         ep.aadhaar_no,
         ep.pan_no,
         ep.date_of_birth,
@@ -489,7 +485,6 @@ async function getAdminPendingPensioners(req, res) {
         ep.retirement_date,
         ep.date_of_death,
         ep.gender,
-        ep.emp_category,
         ep.grade_pay,
         ep.last_salary_drawn,
         ep.caste_category,
@@ -504,7 +499,6 @@ async function getAdminPendingPensioners(req, res) {
 
         -- 💰 Pension Category
         pc.category_type,
-        pc.category_pct,
         pc.acp,
         pc.notional_increment,
         pc.pfms,
@@ -647,7 +641,6 @@ async function handleAdminAllRecords(req, res) {
         ep.date_of_death,
 
         ep.gender,
-        ep.emp_category,
         ep.grade_pay,
         ep.last_salary_drawn,
         ep.caste_category,
@@ -662,7 +655,6 @@ async function handleAdminAllRecords(req, res) {
         des.designation_name,
 
         pc.category_type,
-        pc.category_pct,
         pc.acp,
         pc.notional_increment,
         pc.pfms,
@@ -792,287 +784,6 @@ async function handleAdminAction(req, res) {
   }
 }
 
-// async function createPensioner(req, res) {
-
-//   const client = await pool.connect();
-
-//   // const files = req.files;
-
-//   // let photoUrl = null;
-//   // let signatureUrl = null;
-//   // let salarySlipUrl = null;
-//   // let deathCertificateUrl = null;
-
-//   // // Upload files if exist
-//   // if (files.photo) {
-//   //   photoUrl = await uploadToCloudinary(files.photo[0], "pensioners/photo");
-//   // }
-
-//   // if (files.signature) {
-//   //   signatureUrl = await uploadToCloudinary(
-//   //     files.signature[0],
-//   //     "pensioners/signature",
-//   //   );
-//   // }
-
-//   // if (files.salarySlip) {
-//   //   salarySlipUrl = await uploadToCloudinary(
-//   //     files.salarySlip[0],
-//   //     "pensioners/salary",
-//   //   );
-//   // }
-
-//   // if (files.deathCertificate) {
-//   //   deathCertificateUrl = await uploadToCloudinary(
-//   //     files.deathCertificate[0],
-//   //     "pensioners/death",
-//   //   );
-//   // }
-
-//   try {
-//     const body = req.body;
-
-//     // =========================
-//     // ✅ Basic validation
-//     // =========================
-//     if (!body.employeeId || !body.department || !body.designation || !body.retirementDate) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Missing required fields",
-//       });
-//     }
-
-//     await client.query("BEGIN");
-
-//     // =========================
-//     // 1️⃣ Get department_id
-//     // =========================
-//     const deptRes = await client.query(
-//       "SELECT id FROM departments WHERE department_name = $1",
-//       [body.department]
-//     );
-
-//     await client.query(
-//       `INSERT INTO employee_documents (
-//     employee_id,
-//     photo_path,
-//     signature_path,
-//     salary_slip_path,
-//     death_certificate_path
-//   )
-//   VALUES ($1,$2,$3,$4,$5)`,
-//       [employeeId, photoUrl, signatureUrl, salarySlipUrl, deathCertificateUrl],
-//     );
-
-//     if (deptRes.rows.length === 0) {
-//       throw new Error("Invalid department");
-//     }
-
-//     const departmentId = deptRes.rows[0].id;
-
-//     // =========================
-//     // 2️⃣ Get designation_id
-//     // =========================
-//     const desigRes = await client.query(
-//       "SELECT id FROM designations WHERE designation_name = $1",
-//       [body.designation]
-//     );
-
-//     if (desigRes.rows.length === 0) {
-//       throw new Error("Invalid designation");
-//     }
-
-//     const designationId = desigRes.rows[0].id;
-
-//     // =========================
-//     // 3️⃣ Generate PPO if missing
-//     // =========================
-//     let ppoNo = body.ppoNo;
-
-//     if (!ppoNo) {
-//       const year = new Date().getFullYear();
-
-//       const countRes = await client.query("SELECT COUNT(*) FROM employee_pensioner");
-//       const count = parseInt(countRes.rows[0].count) + 1;
-
-//       ppoNo = `KMC/${year}/${String(count).padStart(3, "0")}`;
-//     }
-
-//     // =========================
-//     // 4️⃣ Insert employee
-//     // =========================
-//     const empInsert = await client.query(
-//       `INSERT INTO employee_pensioner (
-//         employee_id, ppo_no, department_id, designation_id,
-//         aadhaar_no, pan_no,
-//         date_of_birth, date_of_joining, retirement_date, date_of_death,
-//         gender, emp_category,
-//         grade_pay, last_salary_drawn,
-//         caste_category, dependent_name,
-//         mobile_no, family_mobile_no
-//       )
-//       VALUES (
-//         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
-//         $11,$12,$13,$14,$15,$16,$17,$18
-//       )
-//       RETURNING id`,
-//       [
-//         body.employeeId,
-//         ppoNo,
-//         departmentId,
-//         designationId,
-//         body.aadhaar,
-//         body.pan,
-//         body.dob,
-//         body.doj || null,
-//         body.retirementDate,
-//         body.dod || null,
-//         body.gender,
-//         body.empCategory,
-//         Number(body.gradePay),
-//         Number(body.lastSalary),
-//         body.caste,
-//         body.dependentName,
-//         body.mobile,
-//         body.familyMobile
-//       ]
-//     );
-
-//     const employeeId = empInsert.rows[0].id;
-
-//     // =========================
-//     // 5️⃣ Pension Category
-//     // =========================
-//     await client.query(
-//       `INSERT INTO pension_category (
-//         employee_id, category_type, category_pct,
-//         acp, notional_increment, pfms
-//       )
-//       VALUES ($1,$2,$3,$4,$5,$6)`,
-//       [
-//         employeeId,
-//         body.categoryType,
-//         Number(body.categoryPct),
-//         body.acp === "Y",
-//         body.notionalIncrement === "Y",
-//         body.pfms
-//       ]
-//     );
-
-//     // =========================
-//     // 6️⃣ Bank Details
-//     // =========================
-//     await client.query(
-//       `INSERT INTO bank_details (
-//         employee_id, bank_name, ifsc_code, micr,
-//         bank_ac_no, ac_type
-//       )
-//       VALUES ($1,$2,$3,$4,$5,$6)`,
-//       [
-//         employeeId,
-//         body.bankName,
-//         body.ifsc,
-//         body.micr,
-//         body.acNo,
-//         body.acType
-//       ]
-//     );
-
-//     // =========================
-//     // 7️⃣ Address
-//     // =========================
-//     await client.query(
-//       `INSERT INTO employee_address (
-//         employee_id, permanent_address, correspondence_address, pin_code
-//       )
-//       VALUES ($1,$2,$3,$4)`,
-//       [
-//         employeeId,
-//         body.permAddress,
-//         body.corrAddress || null,
-//         body.pinCode
-//       ]
-//     );
-
-//     // =========================
-//     // 8️⃣ Documents (empty init)
-//     // =========================
-//     await client.query(
-//       `INSERT INTO employee_documents (employee_id)
-//        VALUES ($1)`,
-//       [employeeId]
-//     );
-
-//     // =========================
-//     // ✅ COMMIT
-//     // =========================
-//     await client.query("COMMIT");
-
-//     res.status(201).json({
-//       success: true,
-//       message: "Pensioner created successfully",
-//       employeeId,
-//     });
-
-//   } catch (err) {
-//     await client.query("ROLLBACK");
-
-//     console.error(err);
-
-//     res.status(500).json({
-//       success: false,
-//       message: err.message || "Server error",
-//     });
-//   } finally {
-//     client.release();
-//   }
-// }
-
-// function createPensioner(req, res) {
-
-//   console.log("Creating pensioner with data:", req.body);
-
-//   try {
-//     const { pensioners } = getCollections();
-//     const body = req.body;
-
-//     if (!body.name || !body.employeeId || !body.department || !body.retirementDate) {
-//       return res.status(400).json({ success: false, message: "Required fields: name, employeeId, department, retirementDate" });
-//     }
-
-//     // Auto-generate PPO if not provided
-//     if (!body.ppoNumber) {
-//       const year = new Date().getFullYear();
-//       const count = pensioners.count() + 1;
-//       body.ppoNumber = `KMC/${year}/${String(count).padStart(3, "0")}`;
-//     }
-
-//     // Check duplicate
-//     if (pensioners.findOne({ ppoNumber: body.ppoNumber })) {
-//       return res.status(409).json({ success: false, message: `PPO number ${body.ppoNumber} already exists` });
-//     }
-//     if (pensioners.findOne({ employeeId: body.employeeId })) {
-//       return res.status(409).json({ success: false, message: `Employee ID ${body.employeeId} already exists` });
-//     }
-
-//     const now = new Date().toISOString();
-//     const newPensioner = {
-//       ...body,
-//       status: "Pending",
-//       createdBy: req.user.username,
-//       createdAt: now,
-//       updatedAt: now,
-//     };
-
-//     const inserted = pensioners.insert(newPensioner);
-//     res.status(201).json({ success: true, message: "Pensioner registered successfully", data: sanitizePensioner(inserted) });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ success: false, message: "Server error" });
-//   }
-// }
-
-// ── PUT /api/pensioners/:id ───────────────────────────────────────────────────
 
 async function getDepartmentPensioners(req, res) {
   try {
