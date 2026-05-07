@@ -345,16 +345,17 @@ async function createPensioner(req, res) {
         date_of_birth, date_of_joining, retirement_date, date_of_death,
         gender, emp_category,
         grade_pay, last_salary_drawn,
-        caste_category, relation, relation_name,
+        caste_category, relation, relation_name, employee_name
         mobile_no, family_mobile_no
       )
       VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
-        $11,$12,$13,$14,$15,$16,$17,$18,$19
+        $11,$12,$13,$14,$15,$16,$17,$18,$19,$20
       )
       RETURNING id`,
       [
         body.employeeId,
+        body.employeeName,
         ppoNo,
         departmentId,
         designationId,
@@ -635,6 +636,7 @@ async function handleAdminAllRecords(req, res) {
       SELECT 
         ep.id,
         ep.employee_id,
+        ep.employee_name,
         ep.ppo_no,
 
         ep.aadhaar_no,
