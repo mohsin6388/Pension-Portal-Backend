@@ -345,7 +345,7 @@ async function createPensioner(req, res) {
         date_of_birth, date_of_joining, retirement_date, date_of_death,
         gender, emp_category,
         grade_pay, last_salary_drawn,
-        caste_category, relation, relation_name, employee_name
+        caste_category, relation, relation_name, employee_name,
         mobile_no, family_mobile_no
       )
       VALUES (
