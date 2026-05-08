@@ -91,66 +91,272 @@ function listPensioners(req, res) {
 
 // ── GET /api/pensioners/:ppoOrId ──────────────────────────────────────────────
 
-async function getPensioner(req, res) {
-  try {
-    const { id } = req.params;
+// async function getPensioner(req, res) {
+//   try {
+//     const { id } = req.params;
 
+//     const query = `
+//       SELECT 
+//         ep.id,
+//         ep.employee_id,
+//         ep.ppo_no,
+
+//         d.department_name,
+//         des.designation_name,
+
+//         ep.aadhaar_no,
+//         ep.pan_no,
+//         ep.date_of_birth,
+//         ep.date_of_joining,
+//         ep.retirement_date,
+//         ep.date_of_death,
+
+//         ep.gender,
+//         ep.grade_pay,
+//         ep.last_salary_drawn,
+//         ep.caste_category,
+//         ep.relation,
+//         ep.relation_name,
+
+//         ep.mobile_no,
+//         ep.family_mobile_no,
+
+//         pc.category_type,
+//         pc.acp,
+//         pc.notional_increment,
+//         pc.pfms,
+
+//         bd.bank_name,
+//         bd.ifsc_code,
+//         bd.micr,
+//         bd.bank_ac_no,
+//         bd.ac_type,
+
+//         ea.permanent_address,
+//         ea.correspondence_address,
+//         ea.pin_code,
+
+//         ed.photo_path,
+//         ed.signature_path,
+//         ed.salary_slip_path,
+//         ed.death_certificate_path
+
+//       FROM employee_pensioner ep
+//       LEFT JOIN departments d ON ep.department_id = d.id
+//       LEFT JOIN designations des ON ep.designation_id = des.id
+//       LEFT JOIN pension_category pc ON pc.employee_id = ep.id
+//       LEFT JOIN bank_details bd ON bd.employee_id = ep.id
+//       LEFT JOIN employee_address ea ON ea.employee_id = ep.id
+//       LEFT JOIN employee_documents ed ON ed.employee_id = ep.id
+
+//       WHERE ep.employee_id = $1 OR ep.ppo_no = $1
+//       LIMIT 1;
+//     `;
+
+//     const result = await pool.query(query, [id]);
+
+//     if (result.rows.length === 0) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Pensioner not found",
+//       });
+//     }
+
+//     const row = result.rows[0];
+
+//     // 🔥 Transform DB → frontend format (your original structure)
+//     const data = {
+//       employeeId: row.employee_id,
+//       ppoNo: row.ppo_no,
+//       department: row.department_name,
+//       designation: row.designation_name,
+
+//       aadhaar: row.aadhaar_no,
+//       pan: row.pan_no,
+
+//       dob: row.date_of_birth,
+//       doj: row.date_of_joining,
+//       retirementDate: row.retirement_date,
+//       dod: row.date_of_death,
+
+//       gender: row.gender,
+//       gradePay: row.grade_pay,
+//       lastSalary: row.last_salary_drawn,
+
+//       caste: row.caste_category,
+//       relation: row.relation,
+//       relationName: row.relation_name,
+
+//       mobile: row.mobile_no,
+//       familyMobile: row.family_mobile_no,
+
+//       categoryType: row.category_type,
+//       // categoryPct: row.category_pct,
+//       acp: row.acp ? "Y" : "N",
+//       notionalIncrement: row.notional_increment ? "Y" : "N",
+//       pfms: row.pfms,
+
+//       bankName: row.bank_name,
+//       ifsc: row.ifsc_code,
+//       micr: row.micr,
+//       acNo: row.bank_ac_no,
+//       acType: row.ac_type,
+
+//       permAddress: row.permanent_address,
+//       corrAddress: row.correspondence_address,
+//       pinCode: row.pin_code,
+
+//       documents: {
+//         photo: row.photo_path,
+//         signature: row.signature_path,
+//         salarySlip: row.salary_slip_path,
+//         deathCertificate: row.death_certificate_path,
+//       },
+//     };
+
+//     res.json({
+//       success: true,
+//       data,
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({
+//       success: false,
+//       message: "Server error",
+//     });
+//   }
+// }
+
+// GET /api/pensioner/id
+// async function getPensionerById(req, res) {
+//   const { id } = req.params;
+
+//   if (!id) {
+//     return res.status(400).json({
+//       success: false,
+//       message: "Pensioner id is required",
+//     });
+//   }
+
+//   try {
+//     const query = `
+//       SELECT 
+//         ep.id,
+//         ep.employee_id,
+//         ep.ppo_no,
+//         ep.old_ppo,
+//         ep.employee_name,
+//         ep.mobile_no,
+//         ep.family_mobile_no,
+//         ep.aadhaar_no,
+//         ep.pan_no,
+//         ep.gender,
+//         ep.date_of_birth,
+//         ep.date_of_joining,
+//         ep.retirement_date,
+//         ep.date_of_death,
+//         ep.grade_pay,
+//         ep.last_salary_drawn,
+//         ep.caste_category,
+//         ep.relation,
+//         ep.relation_name,
+//         ep.status,
+
+//         d.department_name AS department,
+
+//         des.designation_name AS designation
+
+//       FROM employee_pensioner ep
+
+//       LEFT JOIN department_master d
+//         ON ep.department_id = d.id
+
+//       LEFT JOIN designation_master des
+//         ON ep.designation_id = des.id
+
+//       WHERE ep.id = $1
+//     `;
+
+//     const result = await pool.query(query, [id]);
+
+//     if (result.rows.length === 0) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Pensioner not found",
+//       });
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       data: result.rows[0],
+//     });
+//   } catch (error) {
+//     console.error("Error fetching pensioner:", error);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//       error: error.message,
+//     });
+//   }
+// }
+
+async function getPensionerById(req, res) {
+  const { id } = req.params;
+
+  try {
     const query = `
       SELECT 
-        ep.id,
-        ep.employee_id,
-        ep.ppo_no,
+        ep.*,
 
-        d.department_name,
-        des.designation_name,
+        d.department_name AS department,
+        des.designation_name AS designation,
 
-        ep.aadhaar_no,
-        ep.pan_no,
-        ep.date_of_birth,
-        ep.date_of_joining,
-        ep.retirement_date,
-        ep.date_of_death,
+        -- DOCUMENTS
+        ed.photo_path,
+        ed.signature_path,
+        ed.salary_slip_path,
+        ed.death_certificate_path,
 
-        ep.gender,
-        ep.grade_pay,
-        ep.last_salary_drawn,
-        ep.caste_category,
-        ep.relation,
-        ep.relation_name,
-
-        ep.mobile_no,
-        ep.family_mobile_no,
-
+        -- PENSION CATEGORY
         pc.category_type,
         pc.acp,
         pc.notional_increment,
         pc.pfms,
 
+        -- BANK DETAILS
         bd.bank_name,
         bd.ifsc_code,
         bd.micr,
         bd.bank_ac_no,
         bd.ac_type,
 
+        -- ADDRESS
         ea.permanent_address,
         ea.correspondence_address,
-        ea.pin_code,
-
-        ed.photo_path,
-        ed.signature_path,
-        ed.salary_slip_path,
-        ed.death_certificate_path
+        ea.pin_code
 
       FROM employee_pensioner ep
-      LEFT JOIN departments d ON ep.department_id = d.id
-      LEFT JOIN designations des ON ep.designation_id = des.id
-      LEFT JOIN pension_category pc ON pc.employee_id = ep.id
-      LEFT JOIN bank_details bd ON bd.employee_id = ep.id
-      LEFT JOIN employee_address ea ON ea.employee_id = ep.id
-      LEFT JOIN employee_documents ed ON ed.employee_id = ep.id
 
-      WHERE ep.employee_id = $1 OR ep.ppo_no = $1
-      LIMIT 1;
+      LEFT JOIN departments d
+        ON ep.department_id = d.id
+
+      LEFT JOIN designations des
+        ON ep.designation_id = des.id
+
+      LEFT JOIN employee_documents ed
+        ON ep.id = ed.employee_id
+
+      LEFT JOIN pension_category pc
+        ON ep.id = pc.employee_id
+
+      LEFT JOIN bank_details bd
+        ON ep.id = bd.employee_id
+
+      LEFT JOIN employee_address ea
+        ON ep.id = ea.employee_id
+
+      WHERE ep.id = $1
     `;
 
     const result = await pool.query(query, [id]);
@@ -162,67 +368,16 @@ async function getPensioner(req, res) {
       });
     }
 
-    const row = result.rows[0];
-
-    // 🔥 Transform DB → frontend format (your original structure)
-    const data = {
-      employeeId: row.employee_id,
-      ppoNo: row.ppo_no,
-      department: row.department_name,
-      designation: row.designation_name,
-
-      aadhaar: row.aadhaar_no,
-      pan: row.pan_no,
-
-      dob: row.date_of_birth,
-      doj: row.date_of_joining,
-      retirementDate: row.retirement_date,
-      dod: row.date_of_death,
-
-      gender: row.gender,
-      gradePay: row.grade_pay,
-      lastSalary: row.last_salary_drawn,
-
-      caste: row.caste_category,
-      relation: row.relation,
-      relationName: row.relation_name,
-
-      mobile: row.mobile_no,
-      familyMobile: row.family_mobile_no,
-
-      categoryType: row.category_type,
-      // categoryPct: row.category_pct,
-      acp: row.acp ? "Y" : "N",
-      notionalIncrement: row.notional_increment ? "Y" : "N",
-      pfms: row.pfms,
-
-      bankName: row.bank_name,
-      ifsc: row.ifsc_code,
-      micr: row.micr,
-      acNo: row.bank_ac_no,
-      acType: row.ac_type,
-
-      permAddress: row.permanent_address,
-      corrAddress: row.correspondence_address,
-      pinCode: row.pin_code,
-
-      documents: {
-        photo: row.photo_path,
-        signature: row.signature_path,
-        salarySlip: row.salary_slip_path,
-        deathCertificate: row.death_certificate_path,
-      },
-    };
-
-    res.json({
+    res.status(200).json({
       success: true,
-      data,
+      data: result.rows[0],
     });
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.log(error);
+
     res.status(500).json({
       success: false,
-      message: "Server error",
+      message: "Server Error",
     });
   }
 }
@@ -318,40 +473,108 @@ async function createPensioner(req, res) {
     // =========================
     // 3️⃣ Generate PPO if missing
     // =========================
-    let ppoNo = body.ppoNo;
+    // let ppoNo = body.ppoNo;
 
-    if (!ppoNo) {
-      const year = new Date().getFullYear();
+    // if (!ppoNo) {
+    //   const year = new Date().getFullYear();
 
-      const countRes = await client.query(
-        "SELECT COUNT(*) FROM employee_pensioner",
-      );
-      const count = parseInt(countRes.rows[0].count) + 1;
+    //   const countRes = await client.query(
+    //     "SELECT COUNT(*) FROM employee_pensioner",
+    //   );
+    //   const count = parseInt(countRes.rows[0].count) + 1;
 
-      ppoNo = `100/${year}/${String(count).padStart(3, "0")}`;
-    }
+    //   ppoNo = `100/${year}/${String(count).padStart(3, "0")}`;
+    // }
 
-    // =========================
-    // 4️⃣ Insert employee
-    // =========================
+    // // =========================
+    // // 4️⃣ Insert employee
+    // // =========================
+    // const empInsert = await client.query(
+    //   `INSERT INTO employee_pensioner (
+    //     employee_id, ppo_no, department_id, designation_id,
+    //     aadhaar_no, pan_no,
+    //     date_of_birth, date_of_joining, retirement_date, date_of_death,
+    //     gender,
+    //     grade_pay, last_salary_drawn,
+    //     caste_category, relation, relation_name,
+    //     mobile_no, family_mobile_no, employee_name
+    //   )
+    //   VALUES (
+    //     $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
+    //     $11,$12,$13,$14,$15,$16,$17,$18,$19
+    //   )
+    //   RETURNING id`,
+    //   [
+    //     body.employeeId,
+    //     ppoNo,
+    //     departmentId,
+    //     designationId,
+    //     body.aadhaar,
+    //     body.pan,
+    //     body.dob,
+    //     body.doj || null,
+    //     body.retirementDate,
+    //     body.dod || null,
+    //     body.gender,
+    //     Number(body.gradePay),
+    //     Number(body.lastSalary),
+    //     body.caste,
+    //     body.relation,
+    //     body.relationName,
+    //     body.mobile,
+    //     body.familyMobile,
+    //     body.employeeName
+    //   ],
+    // );
+
+
+    let oldPpo = body.ppoNo || null;
+
+    // Always auto-generate PPO
+    const year = new Date().getFullYear();
+
+    const countRes = await client.query(
+      "SELECT COUNT(*) FROM employee_pensioner",
+    );
+
+    const count = parseInt(countRes.rows[0].count) + 1;
+
+    // Format => 100202600001
+    // 100 + year + 5 digit running number
+
+    const ppoNo = `100${year}${String(count).padStart(5, "0")}`;
     const empInsert = await client.query(
       `INSERT INTO employee_pensioner (
-        employee_id, ppo_no, department_id, designation_id,
-        aadhaar_no, pan_no,
-        date_of_birth, date_of_joining, retirement_date, date_of_death,
-        gender,
-        grade_pay, last_salary_drawn,
-        caste_category, relation, relation_name,
-        mobile_no, family_mobile_no, employee_name
-      )
-      VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
-        $11,$12,$13,$14,$15,$16,$17,$18,$19
-      )
-      RETURNING id`,
+    employee_id,
+    ppo_no,
+    old_ppo,
+    department_id,
+    designation_id,
+    aadhaar_no,
+    pan_no,
+    date_of_birth,
+    date_of_joining,
+    retirement_date,
+    date_of_death,
+    gender,
+    grade_pay,
+    last_salary_drawn,
+    caste_category,
+    relation,
+    relation_name,
+    mobile_no,
+    family_mobile_no,
+    employee_name
+  )
+  VALUES (
+    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
+    $11,$12,$13,$14,$15,$16,$17,$18,$19,$20
+  )
+  RETURNING id`,
       [
         body.employeeId,
         ppoNo,
+        oldPpo,
         departmentId,
         designationId,
         body.aadhaar,
@@ -368,9 +591,10 @@ async function createPensioner(req, res) {
         body.relationName,
         body.mobile,
         body.familyMobile,
-        body.employeeName
+        body.employeeName,
       ],
     );
+
 
     const employeeId = empInsert.rows[0].id;
 
@@ -915,7 +1139,7 @@ function sanitizePensioner(p) {
 
 module.exports = {
   listPensioners,
-  getPensioner,
+  // getPensioner,
   createPensioner,
   getDepartmentPensioners,
   getAdminPendingPensioners,
@@ -923,4 +1147,5 @@ module.exports = {
   handleAdminAction,
   updatePensioner,
   getStats,
+  getPensionerById,
 };

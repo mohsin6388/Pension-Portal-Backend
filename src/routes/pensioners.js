@@ -2,7 +2,8 @@ const router = require("express").Router();
 const { authenticate, authorize, auditLog } = require("../middleware/auth");
 const {
   listPensioners,
-  getPensioner,
+  // getPensioner,
+  getPensionerById,
   createPensioner,
   getDepartmentPensioners,
   getAdminPendingPensioners,
@@ -20,7 +21,7 @@ const upload = require("../middleware/upload");
 
 router.get("/stats", getStats);
 router.get("/", listPensioners);
-router.get("/:id", getPensioner);
+router.get("/:id", getPensionerById);
 
 // Clerks and admins can create/update
 
