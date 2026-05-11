@@ -27,6 +27,7 @@ app.use(cors({
   credentials: true,
 }));
 
+app.set("trust proxy", 1);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
@@ -59,6 +60,28 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
   res.status(500).json({ success: false, message: "Internal server error" });
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error(err);
+
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({
+      success: false,
+      message: err.message,
+    });
+  }
+
+  res.status(500).json({
+    success: false,
+    message: "Something went wrong",
+  });
+});
+
+
+app.listen(5000, () => {
+  console.log("Server running");
 });
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
