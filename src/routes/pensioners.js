@@ -40,6 +40,9 @@ router.post("/",  upload.fields([
   ]), createPensioner);
 
 router.get("/department/:departmentId", getDepartmentPensioners);
-router.put("/:id", authorize("admin", "clerk"), auditLog("UPDATE_PENSIONER"), updatePensioner);
+
+router.put("/update/:ppo_no",
+  //  authorize("admin", "clerk"), auditLog("UPDATE_PENSIONER"), 
+   updatePensioner);
 
 module.exports = router;
