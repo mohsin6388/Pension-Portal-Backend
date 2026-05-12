@@ -32,9 +32,9 @@ pool.on("error", (err) => {
 async function createPensioner(req, res) {
   const client = await pool.connect();
 
-   console.log("ROLE =>", req.headers["x-user-role"]);
+  //  console.log("ROLE =>", req.headers["x-user-role"]);
 
-   console.log("USER ID =>", req.headers["x-user-id"]);
+  //  console.log("USER ID =>", req.headers["x-user-id"]);
 
   try {
     const body = req.body;

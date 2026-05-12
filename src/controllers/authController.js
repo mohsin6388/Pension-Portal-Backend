@@ -132,15 +132,16 @@ async function login(req, res, next) {
 
   console.log("Login attempt:", req.body);
   try {
-    let { username, password } = req.body;
+    let { username, password, role } = req.body;
 
     const email = String(username || "").trim();
     const password_hash = String(password || "").trim();
+    const user_role = String(role || "").trim();
 
     const result = await pool.query(
       `SELECT id, email, password_hash, is_active, role
-       FROM users WHERE email = $1`,
-      [email],
+       FROM users WHERE email = $1 AND role = $2`,
+      [email, user_role],
     );
 
     if (result.rows.length === 0) {
