@@ -114,7 +114,23 @@ function signRefreshToken(user) {
 // }
 
 //  ---- POST /api/auth/login ────────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 async function login(req, res, next) {
+
+  console.log("Login attempt:", req.body);
   try {
     let { username, password } = req.body;
 
@@ -153,6 +169,47 @@ async function login(req, res, next) {
 
     const token = generateToken(user.id);
 
+
+    //======================================
+    // Activity Log
+    //======================================
+
+    await pool.query(
+      `
+  INSERT INTO activity_logs (
+    user_id,
+    user_role,
+    action,
+    module,
+    target_id,
+    message,
+    ip_address,
+    user_agent
+  )
+  VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+  `,
+      [
+        user.id,
+
+        user.role,
+
+        "LOGIN",
+
+        "AUTH",
+
+        user.id,
+
+        `${user.role} logged into the system`,
+
+        req.ip,
+
+        req.headers["user-agent"],
+      ],
+    );
+
+
+
+
     res.json({
       success: true,
       data: {
@@ -168,6 +225,24 @@ async function login(req, res, next) {
     next(err);
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // ── POST /api/auth/refresh ────────────────────────────────────────────────────
 function refresh(req, res) {

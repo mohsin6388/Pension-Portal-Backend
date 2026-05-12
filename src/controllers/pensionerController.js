@@ -1,6 +1,7 @@
 require("dotenv").config();
 const cloudinary = require("../config/cloudinary");
 const { Pool } = require("pg");
+const createActivityLog = require("../utils/activityLogger");
 
 const pool = new Pool({
   connectionString:
@@ -20,10 +21,19 @@ pool.on("error", (err) => {
 });
 
 
+
+
+
+
+// Create Employee by Operator =================================
+// ===== api/pensioners/ ============ 
+
 async function createPensioner(req, res) {
   const client = await pool.connect();
 
-  console.log(req.body);
+   console.log("ROLE =>", req.headers["x-user-role"]);
+
+   console.log("USER ID =>", req.headers["x-user-id"]);
 
   try {
     const body = req.body;
@@ -147,8 +157,6 @@ async function createPensioner(req, res) {
     // 5️⃣ Upload Documents (AFTER employeeId exists)
     // =========================
 
-    console.log(req.files.salarySlip[0]);
-
     const photoUrl = req.files?.photo?.[0]?.path || null;
     const signatureUrl = req.files?.signature?.[0]?.path || null;
     const salarySlipUrl = req.files?.salarySlip?.[0]?.path || null;
@@ -209,6 +217,32 @@ async function createPensioner(req, res) {
     );
 
     // =========================
+    // 9️⃣ Activity Log
+    // =========================
+
+    await createActivityLog(client, {
+      userId: req.headers["x-user-id"],
+      userRole: req.headers["x-user-role"],
+
+      action: "CREATE",
+
+      module: "employee_pensioner",
+
+      targetId: employeeId,
+
+      changes: {
+        employee_name: body.employeeName,
+        employee_id: body.employeeId,
+        ppo_no: ppoNo,
+        department: body.department,
+      },
+
+      message: `Operator created pensioner ${body.employeeName}`,
+
+      req,
+    });
+
+    // =========================
     // ✅ COMMIT
     // =========================
     await client.query("COMMIT");
@@ -232,8 +266,13 @@ async function createPensioner(req, res) {
   }
 }
 
+
+
+
+
+
 // ── GET /api/pensioners ───────────────────────────────────────────────────────
-// Query params: status, search, page, limit
+
 function listPensioners(req, res) {
   try {
     const { pensioners } = getCollections();
@@ -290,220 +329,22 @@ function listPensioners(req, res) {
   }
 }
 
-// ── GET /api/pensioners/:ppoOrId ──────────────────────────────────────────────
 
-// async function getPensioner(req, res) {
-//   try {
-//     const { id } = req.params;
 
-//     const query = `
-//       SELECT 
-//         ep.id,
-//         ep.employee_id,
-//         ep.ppo_no,
 
-//         d.department_name,
-//         des.designation_name,
 
-//         ep.aadhaar_no,
-//         ep.pan_no,
-//         ep.date_of_birth,
-//         ep.date_of_joining,
-//         ep.retirement_date,
-//         ep.date_of_death,
 
-//         ep.gender,
-//         ep.grade_pay,
-//         ep.last_salary_drawn,
-//         ep.caste_category,
-//         ep.relation,
-//         ep.relation_name,
 
-//         ep.mobile_no,
-//         ep.family_mobile_no,
 
-//         pc.category_type,
-//         pc.acp,
-//         pc.notional_increment,
-//         pc.pfms,
 
-//         bd.bank_name,
-//         bd.ifsc_code,
-//         bd.micr,
-//         bd.bank_ac_no,
-//         bd.ac_type,
-
-//         ea.permanent_address,
-//         ea.correspondence_address,
-//         ea.pin_code,
-
-//         ed.photo_path,
-//         ed.signature_path,
-//         ed.salary_slip_path,
-//         ed.death_certificate_path
-
-//       FROM employee_pensioner ep
-//       LEFT JOIN departments d ON ep.department_id = d.id
-//       LEFT JOIN designations des ON ep.designation_id = des.id
-//       LEFT JOIN pension_category pc ON pc.employee_id = ep.id
-//       LEFT JOIN bank_details bd ON bd.employee_id = ep.id
-//       LEFT JOIN employee_address ea ON ea.employee_id = ep.id
-//       LEFT JOIN employee_documents ed ON ed.employee_id = ep.id
-
-//       WHERE ep.employee_id = $1 OR ep.ppo_no = $1
-//       LIMIT 1;
-//     `;
-
-//     const result = await pool.query(query, [id]);
-
-//     if (result.rows.length === 0) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Pensioner not found",
-//       });
-//     }
-
-//     const row = result.rows[0];
-
-//     // 🔥 Transform DB → frontend format (your original structure)
-//     const data = {
-//       employeeId: row.employee_id,
-//       ppoNo: row.ppo_no,
-//       department: row.department_name,
-//       designation: row.designation_name,
-
-//       aadhaar: row.aadhaar_no,
-//       pan: row.pan_no,
-
-//       dob: row.date_of_birth,
-//       doj: row.date_of_joining,
-//       retirementDate: row.retirement_date,
-//       dod: row.date_of_death,
-
-//       gender: row.gender,
-//       gradePay: row.grade_pay,
-//       lastSalary: row.last_salary_drawn,
-
-//       caste: row.caste_category,
-//       relation: row.relation,
-//       relationName: row.relation_name,
-
-//       mobile: row.mobile_no,
-//       familyMobile: row.family_mobile_no,
-
-//       categoryType: row.category_type,
-//       // categoryPct: row.category_pct,
-//       acp: row.acp ? "Y" : "N",
-//       notionalIncrement: row.notional_increment ? "Y" : "N",
-//       pfms: row.pfms,
-
-//       bankName: row.bank_name,
-//       ifsc: row.ifsc_code,
-//       micr: row.micr,
-//       acNo: row.bank_ac_no,
-//       acType: row.ac_type,
-
-//       permAddress: row.permanent_address,
-//       corrAddress: row.correspondence_address,
-//       pinCode: row.pin_code,
-
-//       documents: {
-//         photo: row.photo_path,
-//         signature: row.signature_path,
-//         salarySlip: row.salary_slip_path,
-//         deathCertificate: row.death_certificate_path,
-//       },
-//     };
-
-//     res.json({
-//       success: true,
-//       data,
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({
-//       success: false,
-//       message: "Server error",
-//     });
-//   }
-// }
-
-// GET /api/pensioner/id
-// async function getPensionerById(req, res) {
-//   const { id } = req.params;
-
-//   if (!id) {
-//     return res.status(400).json({
-//       success: false,
-//       message: "Pensioner id is required",
-//     });
-//   }
-
-//   try {
-//     const query = `
-//       SELECT 
-//         ep.id,
-//         ep.employee_id,
-//         ep.ppo_no,
-//         ep.old_ppo,
-//         ep.employee_name,
-//         ep.mobile_no,
-//         ep.family_mobile_no,
-//         ep.aadhaar_no,
-//         ep.pan_no,
-//         ep.gender,
-//         ep.date_of_birth,
-//         ep.date_of_joining,
-//         ep.retirement_date,
-//         ep.date_of_death,
-//         ep.grade_pay,
-//         ep.last_salary_drawn,
-//         ep.caste_category,
-//         ep.relation,
-//         ep.relation_name,
-//         ep.status,
-
-//         d.department_name AS department,
-
-//         des.designation_name AS designation
-
-//       FROM employee_pensioner ep
-
-//       LEFT JOIN department_master d
-//         ON ep.department_id = d.id
-
-//       LEFT JOIN designation_master des
-//         ON ep.designation_id = des.id
-
-//       WHERE ep.id = $1
-//     `;
-
-//     const result = await pool.query(query, [id]);
-
-//     if (result.rows.length === 0) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Pensioner not found",
-//       });
-//     }
-
-//     return res.status(200).json({
-//       success: true,
-//       data: result.rows[0],
-//     });
-//   } catch (error) {
-//     console.error("Error fetching pensioner:", error);
-
-//     return res.status(500).json({
-//       success: false,
-//       message: "Internal server error",
-//       error: error.message,
-//     });
-//   }
-// }
+// GET Pension Detail Paticular Employee By ID =============================================================
 
 async function getPensionerById(req, res) {
   const { id } = req.params;
+
+  //  console.log("ROLE =>", req.headers["x-user-role"]);
+
+  //  console.log("USER ID =>", req.headers["x-user-id"]);
 
   try {
     const query = `
@@ -569,6 +410,46 @@ async function getPensionerById(req, res) {
       });
     }
 
+
+
+    //================================
+    //   Activity Log - View Action
+    //================================
+
+    await pool.query(
+      `
+  INSERT INTO activity_logs (
+    user_id,
+    user_role,
+    action,
+    module,
+    target_id,
+    message,
+    ip_address,
+    user_agent
+  )
+  VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+  `,
+      [
+        req.headers["x-user-id"],
+        req.headers["x-user-role"],
+
+        "VIEW_DETAILS",
+
+        "employee_pensioner",
+
+        id,
+
+        `${req.headers["x-user-role"]} viewed pensioner details`,
+
+        req.ip,
+
+        req.headers["user-agent"],
+      ],
+    );
+
+
+
     res.status(200).json({
       success: true,
       data: result.rows[0],
@@ -583,8 +464,1095 @@ async function getPensionerById(req, res) {
   }
 }
 
+
+
+
+
+
+
+
+
+//===================================== Admin, Super Admin Routes =======================================================
+async function handleAdminAction(req, res) {
+  const { ppo_no, action, remark, user } = req.body;
+
+  console.log(req.body);
+
+
+  const logRole =
+    user.role === "super_admin_1"
+      ? "Accountant"
+      : user.role === "super_admin_2"
+        ? "CFO"
+        : user.role;
+
+
+  if (!ppo_no || !action) {
+    return res.status(400).json({
+      success: false,
+      message: "ppo_no and action are required",
+    });
+  }
+
+  const oldDataRes = await pool.query(
+    `
+  SELECT id, employee_name, status
+  FROM employee_pensioner
+  WHERE ppo_no = $1
+  `,
+    [ppo_no],
+  );
+
+  if (oldDataRes.rows.length === 0) {
+    return res.status(404).json({
+      success: false,
+      message: "PPO not found",
+    });
+  }
+
+  const oldData = oldDataRes.rows[0];
+
+  let status;
+
+  try {
+    if (user.role === "super_admin_1") {
+      status =
+        action === "approve"
+          ? "Admin Approved"
+          : action === "reject"
+            ? "Admin Rejected"
+            : null;
+    } else {
+      status =
+        action === "approve"
+          ? "Full Approved"
+          : action === "reject"
+            ? "Full Rejected"
+            : null;
+    }
+
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid action",
+      });
+    }
+
+    // 🔥 update using PPO number
+    const result = await pool.query(
+      `UPDATE employee_pensioner
+       SET status = $1
+       WHERE ppo_no = $2
+       RETURNING ppo_no, status`,
+      [status, ppo_no],
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "PPO not found",
+      });
+    }
+
+    // ==================================
+    //  Activity Log - Approve/Reject Action
+    // ==================================
+
+    await pool.query(
+      `
+  INSERT INTO activity_logs (
+    user_id,
+    user_role,
+    action,
+    module,
+    target_id,
+    changes,
+    message,
+    ip_address,
+    user_agent
+  )
+  VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+  `,
+      [
+        user.id,
+
+        logRole,
+
+        action === "approve" ? "APPROVE" : "REJECT",
+
+        "employee_pensioner",
+
+        oldData.id,
+
+        JSON.stringify({
+          status: {
+            old: oldData.status,
+            new: status,
+          },
+          remark: remark || null,
+        }),
+
+        `${logRole} ${action}ed pensioner ${oldData.employee_name}`,
+
+        req.ip,
+
+        req.headers["user-agent"],
+      ],
+    );
+
+    // ==================================
+    //  Activity Log - Approve/Reject Action
+    //              END
+    // ==================================
+
+
+
+
+
+    res.json({
+      success: true,
+      message: `Pension ${status}`,
+      data: result.rows[0],
+    });
+  } catch (err) {
+    console.error("ACTION ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+}
+
+
+
+
+//============================= Update Pensioner By PPO Number (Admin and Super Admin Edit) ============================
+async function updatePensioner(req, res) {
+  const client = await pool.connect();
+
+  try {
+    const ppo_no = req.params.ppo_no?.trim();
+
+    console.log("Update Pensioner called with PPO:", ppo_no);
+    console.log("Request body:", req.body);
+
+    const body = req.body;
+
+
+    // =========================================
+    // ROLE
+    // =========================================
+
+    const updatedUser = body.updatedUser || {};
+
+    const editedByRole = updatedUser.role || "Unknown";
+
+    // Dynamic column
+    const editedColumn =
+      editedByRole === "super_admin_1" ? "edited_by_role" : "edited_by_cfo";
+
+    //=========================================
+    //    Activity Log Role Variable
+    //=========================================
+
+    const frontendRole = updatedUser.role || "Unknown";
+
+    const logRole =
+      frontendRole === "super_admin_1"
+        ? "Accountant"
+        : frontendRole === "super_admin_2"
+          ? "CFO"
+          : frontendRole;
+
+
+
+
+    await client.query("BEGIN");
+
+    // =========================================
+    // FIND EMPLOYEE
+    // =========================================
+
+    const empRes = await client.query(
+      `
+      SELECT id
+      FROM employee_pensioner
+      WHERE TRIM(ppo_no) = $1
+      `,
+      [ppo_no],
+    );
+
+    if (empRes.rows.length === 0) {
+      await client.query("ROLLBACK");
+
+      return res.status(404).json({
+        success: false,
+        message: "Pensioner not found",
+      });
+    }
+
+    const employeeId = empRes.rows[0].id;
+
+    console.log("EMPLOYEE ID =>", employeeId);
+
+    // =========================================
+    // OLD DATA FOR LOGS
+    // =========================================
+
+    const oldDataRes = await client.query(
+      `
+      SELECT *
+      FROM employee_pensioner
+      WHERE id = $1
+      `,
+      [employeeId],
+    );
+
+    const oldData = oldDataRes.rows[0];
+
+    // =========================================
+    // GET DEPARTMENT ID
+    // =========================================
+
+    let departmentId = null;
+
+    if (body.department_name) {
+      const deptRes = await client.query(
+        `
+        SELECT id
+        FROM departments
+        WHERE department_name = $1
+        `,
+        [body.department_name],
+      );
+
+      if (deptRes.rows.length > 0) {
+        departmentId = deptRes.rows[0].id;
+      }
+    }
+
+    // =========================================
+    // GET DESIGNATION ID
+    // =========================================
+
+    let designationId = null;
+
+    if (body.designation_name) {
+      const desigRes = await client.query(
+        `
+        SELECT id
+        FROM designations
+        WHERE designation_name = $1
+        `,
+        [body.designation_name],
+      );
+
+      if (desigRes.rows.length > 0) {
+        designationId = desigRes.rows[0].id;
+      }
+    }
+
+    // =========================================
+    // UPDATE employee_pensioner
+    // =========================================
+
+    console.log("Updating employee_pensioner");
+
+    await client.query(
+      `
+      UPDATE employee_pensioner
+      SET
+        employee_id = $1,
+        employee_name = $2,
+        aadhaar_no = $3,
+        pan_no = $4,
+        date_of_birth = $5,
+        date_of_joining = $6,
+        retirement_date = $7,
+        date_of_death = $8,
+        gender = $9,
+        grade_pay = $10,
+        last_salary_drawn = $11,
+        caste_category = $12,
+        relation = $13,
+        relation_name = $14,
+        mobile_no = $15,
+        family_mobile_no = $16,
+        department_id = $17,
+        designation_id = $18,
+        status = $19,
+        ${editedColumn} = $20,
+        edited_at = NOW()
+      WHERE id = $21
+      `,
+      [
+        body.employee_id,
+        body.employee_name,
+        body.aadhaar_no,
+        body.pan_no,
+        body.date_of_birth,
+        body.date_of_joining,
+        body.retirement_date,
+        body.date_of_death,
+        body.gender,
+        body.grade_pay,
+        body.last_salary_drawn,
+        body.caste_category,
+        body.relation,
+        body.relation_name,
+        body.mobile_no,
+        body.family_mobile_no,
+        departmentId,
+        designationId,
+        body.status,
+        editedByRole,
+        employeeId,
+      ],
+    );
+
+    // =========================================
+    // UPDATE employee_documents
+    // =========================================
+
+    console.log("Updating employee_documents");
+
+    await client.query(
+      `
+      UPDATE employee_documents
+      SET
+        photo_path = $1,
+        signature_path = $2,
+        salary_slip_path = $3,
+        death_certificate_path = $4
+      WHERE employee_id = $5
+      `,
+      [
+        body.photo_path,
+        body.signature_path,
+        body.salary_slip_path,
+        body.death_certificate_path,
+        employeeId,
+      ],
+    );
+
+    // =========================================
+    // UPDATE pension_category
+    // =========================================
+
+    console.log("Updating pension_category");
+
+    await client.query(
+      `
+      UPDATE pension_category
+      SET
+        category_type = $1,
+        acp = $2,
+        notional_increment = $3,
+        pfms = $4
+      WHERE employee_id = $5
+      `,
+      [
+        body.category_type,
+        body.acp,
+        body.notional_increment,
+        body.pfms,
+        employeeId,
+      ],
+    );
+
+    // =========================================
+    // UPDATE bank_details
+    // =========================================
+
+    console.log("Updating bank_details");
+
+    await client.query(
+      `
+      UPDATE bank_details
+      SET
+        bank_name = $1,
+        ifsc_code = $2,
+        bank_ac_no = $3,
+        ac_type = $4
+      WHERE employee_id = $5
+      `,
+      [
+        body.bank_name,
+        body.ifsc_code,
+        body.bank_ac_no,
+        body.ac_type,
+        employeeId,
+      ],
+    );
+
+    // =========================================
+    // UPDATE employee_address
+    // =========================================
+
+    console.log("Updating employee_address");
+
+    await client.query(
+      `
+      UPDATE employee_address
+      SET
+        permanent_address = $1,
+        correspondence_address = $2,
+        pin_code = $3
+      WHERE employee_id = $4
+      `,
+      [
+        body.permanent_address,
+        body.correspondence_address,
+        body.pin_code,
+        employeeId,
+      ],
+    );
+
+    // =========================================
+    // CREATE CHANGES OBJECT
+    // =========================================
+
+    const changes = {};
+
+    if (oldData.employee_name !== body.employee_name) {
+      changes.employee_name = {
+        old: oldData.employee_name,
+        new: body.employee_name,
+      };
+    }
+
+    if (oldData.mobile_no !== body.mobile_no) {
+      changes.mobile_no = {
+        old: oldData.mobile_no,
+        new: body.mobile_no,
+      };
+    }
+
+    if (oldData.family_mobile_no !== body.family_mobile_no) {
+      changes.family_mobile_no = {
+        old: oldData.family_mobile_no,
+        new: body.family_mobile_no,
+      };
+    }
+
+    if (oldData.status !== body.status) {
+      changes.status = {
+        old: oldData.status,
+        new: body.status,
+      };
+    }
+
+    if (oldData.relation_name !== body.relation_name) {
+      changes.relation_name = {
+        old: oldData.relation_name,
+        new: body.relation_name,
+      };
+    }
+
+    if (oldData.grade_pay !== body.grade_pay) {
+      changes.grade_pay = {
+        old: oldData.grade_pay,
+        new: body.grade_pay,
+      };
+    }
+
+    // =========================================
+    // SAVE ACTIVITY LOG
+    // =========================================
+
+    if (Object.keys(changes).length > 0) {
+      await client.query(
+        `
+        INSERT INTO activity_logs (
+          user_id,
+          user_role,
+          action,
+          module,
+          target_id,
+          changes,
+          message,
+          ip_address,
+          user_agent
+        )
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+        `,
+        [
+          updatedUser.id || null,
+
+          logRole,
+
+          "UPDATE",
+
+          "employee_pensioner",
+
+          employeeId,
+
+          JSON.stringify(changes),
+
+          `${logRole} updated pensioner ${body.employee_name}`,
+
+          req.ip,
+
+          req.headers["user-agent"],
+        ],
+      );
+    }
+
+    // =========================================
+    // COMMIT
+    // =========================================
+
+    await client.query("COMMIT");
+
+    return res.status(200).json({
+      success: true,
+      message: "Pensioner updated successfully",
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+
+    console.error("UPDATE ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  } finally {
+    client.release();
+  }
+}
+
+// async function updatePensioner(req, res) {
+//   const client = await pool.connect();
+
+//   try {
+//     const ppo_no = req.params.ppo_no?.trim();
+
+//     console.log("Update Pensioner called with PPO:", ppo_no);
+//     console.log("Request body:", req.body);
+
+//     const body = req.body;
+
+//     // =========================================
+//     // ROLE
+//     // =========================================
+
+//     const editedByRole = body.updatedUser.role || "Unknown";
+
+//     if (editedByRole === "super_admin_1") {
+//       await client.query("BEGIN");
+
+//       // =========================================
+//       // FIND EMPLOYEE
+//       // =========================================
+
+//       const empRes = await client.query(
+//         `
+//       SELECT id
+//       FROM employee_pensioner
+//       WHERE TRIM(ppo_no) = $1
+//       `,
+//         [ppo_no],
+//       );
+
+//       if (empRes.rows.length === 0) {
+//         await client.query("ROLLBACK");
+
+//         return res.status(404).json({
+//           success: false,
+//           message: "Pensioner not found",
+//         });
+//       }
+
+//       const employeeId = empRes.rows[0].id;
+
+//       console.log("EMPLOYEE ID =>", employeeId);
+
+//       // =========================================
+//       // GET DEPARTMENT ID
+//       // =========================================
+
+//       let departmentId = null;
+
+//       if (body.department_name) {
+//         const deptRes = await client.query(
+//           `
+//         SELECT id
+//         FROM departments
+//         WHERE department_name = $1
+//         `,
+//           [body.department_name],
+//         );
+
+//         if (deptRes.rows.length > 0) {
+//           departmentId = deptRes.rows[0].id;
+//         }
+//       }
+
+//       // =========================================
+//       // GET DESIGNATION ID
+//       // =========================================
+
+//       let designationId = null;
+
+//       if (body.designation_name) {
+//         const desigRes = await client.query(
+//           `
+//         SELECT id
+//         FROM designations
+//         WHERE designation_name = $1
+//         `,
+//           [body.designation_name],
+//         );
+
+//         if (desigRes.rows.length > 0) {
+//           designationId = desigRes.rows[0].id;
+//         }
+//       }
+
+//       // =========================================
+//       // UPDATE employee_pensioner
+//       // =========================================
+
+//       console.log("Updating employee_pensioner");
+
+//       await client.query(
+//         `
+//       UPDATE employee_pensioner
+//       SET
+//         employee_id = $1,
+//         employee_name = $2,
+//         aadhaar_no = $3,
+//         pan_no = $4,
+//         date_of_birth = $5,
+//         date_of_joining = $6,
+//         retirement_date = $7,
+//         date_of_death = $8,
+//         gender = $9,
+//         grade_pay = $10,
+//         last_salary_drawn = $11,
+//         caste_category = $12,
+//         relation = $13,
+//         relation_name = $14,
+//         mobile_no = $15,
+//         family_mobile_no = $16,
+//         department_id = $17,
+//         designation_id = $18,
+//         "status" = $19,
+//         edited_by_role = $20,
+//         edited_at = NOW()
+//       WHERE id = $21
+//       `,
+//         [
+//           body.employee_id,
+//           body.employee_name,
+//           body.aadhaar_no,
+//           body.pan_no,
+//           body.date_of_birth,
+//           body.date_of_joining,
+//           body.retirement_date,
+//           body.date_of_death,
+//           body.gender,
+//           body.grade_pay,
+//           body.last_salary_drawn,
+//           body.caste_category,
+//           body.relation,
+//           body.relation_name,
+//           body.mobile_no,
+//           body.family_mobile_no,
+//           departmentId,
+//           designationId,
+//           body.status,
+//           editedByRole,
+//           employeeId,
+//         ],
+//       );
+
+//       // =========================================
+//       // UPDATE employee_documents
+//       // =========================================
+
+//       console.log("Updating employee_documents");
+
+//       await client.query(
+//         `
+//       UPDATE employee_documents
+//       SET
+//         photo_path = $1,
+//         signature_path = $2,
+//         salary_slip_path = $3,
+//         death_certificate_path = $4
+//       WHERE employee_id = $5
+//       `,
+//         [
+//           body.photo_path,
+//           body.signature_path,
+//           body.salary_slip_path,
+//           body.death_certificate_path,
+//           employeeId,
+//         ],
+//       );
+
+//       // =========================================
+//       // UPDATE pension_category
+//       // =========================================
+
+//       console.log("Updating pension_category");
+
+//       await client.query(
+//         `
+//       UPDATE pension_category
+//       SET
+//         category_type = $1,
+//         acp = $2,
+//         notional_increment = $3,
+//         pfms = $4
+//       WHERE employee_id = $5
+//       `,
+//         [
+//           body.category_type,
+//           body.acp,
+//           body.notional_increment,
+//           body.pfms,
+//           employeeId,
+//         ],
+//       );
+
+//       // =========================================
+//       // UPDATE bank_details
+//       // =========================================
+
+//       console.log("Updating bank_details");
+
+//       await client.query(
+//         `
+//       UPDATE bank_details
+//       SET
+//         bank_name = $1,
+//         ifsc_code = $2,
+//         bank_ac_no = $3,
+//         ac_type = $4
+//       WHERE employee_id = $5
+//       `,
+//         [
+//           body.bank_name,
+//           body.ifsc_code,
+//           body.bank_ac_no,
+//           body.ac_type,
+//           employeeId,
+//         ],
+//       );
+
+//       // =========================================
+//       // UPDATE employee_address
+//       // =========================================
+
+//       console.log("Updating employee_address");
+
+//       await client.query(
+//         `
+//       UPDATE employee_address
+//       SET
+//         permanent_address = $1,
+//         correspondence_address = $2,
+//         pin_code = $3
+//       WHERE employee_id = $4
+//       `,
+//         [
+//           body.permanent_address,
+//           body.correspondence_address,
+//           body.pin_code,
+//           employeeId,
+//         ],
+//       );
+
+//       // =========================================
+//       // COMMIT
+//       // =========================================
+
+//       await client.query("COMMIT");
+//     } else {
+//       await client.query("BEGIN");
+
+//       // =========================================
+//       // FIND EMPLOYEE
+//       // =========================================
+
+//       const empRes = await client.query(
+//         `
+//       SELECT id
+//       FROM employee_pensioner
+//       WHERE TRIM(ppo_no) = $1
+//       `,
+//         [ppo_no],
+//       );
+
+//       if (empRes.rows.length === 0) {
+//         await client.query("ROLLBACK");
+
+//         return res.status(404).json({
+//           success: false,
+//           message: "Pensioner not found",
+//         });
+//       }
+
+//       const employeeId = empRes.rows[0].id;
+
+//       console.log("EMPLOYEE ID =>", employeeId);
+
+//       // =========================================
+//       // GET DEPARTMENT ID
+//       // =========================================
+
+//       let departmentId = null;
+
+//       if (body.department_name) {
+//         const deptRes = await client.query(
+//           `
+//         SELECT id
+//         FROM departments
+//         WHERE department_name = $1
+//         `,
+//           [body.department_name],
+//         );
+
+//         if (deptRes.rows.length > 0) {
+//           departmentId = deptRes.rows[0].id;
+//         }
+//       }
+
+//       // =========================================
+//       // GET DESIGNATION ID
+//       // =========================================
+
+//       let designationId = null;
+
+//       if (body.designation_name) {
+//         const desigRes = await client.query(
+//           `
+//         SELECT id
+//         FROM designations
+//         WHERE designation_name = $1
+//         `,
+//           [body.designation_name],
+//         );
+
+//         if (desigRes.rows.length > 0) {
+//           designationId = desigRes.rows[0].id;
+//         }
+//       }
+
+//       // =========================================
+//       // UPDATE employee_pensioner
+//       // =========================================
+
+//       console.log("Updating employee_pensioner");
+
+//       await client.query(
+//         `
+//       UPDATE employee_pensioner
+//       SET
+//         employee_id = $1,
+//         employee_name = $2,
+//         aadhaar_no = $3,
+//         pan_no = $4,
+//         date_of_birth = $5,
+//         date_of_joining = $6,
+//         retirement_date = $7,
+//         date_of_death = $8,
+//         gender = $9,
+//         grade_pay = $10,
+//         last_salary_drawn = $11,
+//         caste_category = $12,
+//         relation = $13,
+//         relation_name = $14,
+//         mobile_no = $15,
+//         family_mobile_no = $16,
+//         department_id = $17,
+//         designation_id = $18,
+//         "status" = $19,
+//         edited_by_cfo = $20,
+//         edited_at = NOW()
+//       WHERE id = $21
+//       `,
+//         [
+//           body.employee_id,
+//           body.employee_name,
+//           body.aadhaar_no,
+//           body.pan_no,
+//           body.date_of_birth,
+//           body.date_of_joining,
+//           body.retirement_date,
+//           body.date_of_death,
+//           body.gender,
+//           body.grade_pay,
+//           body.last_salary_drawn,
+//           body.caste_category,
+//           body.relation,
+//           body.relation_name,
+//           body.mobile_no,
+//           body.family_mobile_no,
+//           departmentId,
+//           designationId,
+//           body.status,
+//           editedByRole,
+//           employeeId,
+//         ],
+//       );
+
+//       // =========================================
+//       // UPDATE employee_documents
+//       // =========================================
+
+//       console.log("Updating employee_documents");
+
+//       await client.query(
+//         `
+//       UPDATE employee_documents
+//       SET
+//         photo_path = $1,
+//         signature_path = $2,
+//         salary_slip_path = $3,
+//         death_certificate_path = $4
+//       WHERE employee_id = $5
+//       `,
+//         [
+//           body.photo_path,
+//           body.signature_path,
+//           body.salary_slip_path,
+//           body.death_certificate_path,
+//           employeeId,
+//         ],
+//       );
+
+//       // =========================================
+//       // UPDATE pension_category
+//       // =========================================
+
+//       console.log("Updating pension_category");
+
+//       await client.query(
+//         `
+//       UPDATE pension_category
+//       SET
+//         category_type = $1,
+//         acp = $2,
+//         notional_increment = $3,
+//         pfms = $4
+//       WHERE employee_id = $5
+//       `,
+//         [
+//           body.category_type,
+//           body.acp,
+//           body.notional_increment,
+//           body.pfms,
+//           employeeId,
+//         ],
+//       );
+
+//       // =========================================
+//       // UPDATE bank_details
+//       // =========================================
+
+//       console.log("Updating bank_details");
+
+//       await client.query(
+//         `
+//       UPDATE bank_details
+//       SET
+//         bank_name = $1,
+//         ifsc_code = $2,
+//         bank_ac_no = $3,
+//         ac_type = $4
+//       WHERE employee_id = $5
+//       `,
+//         [
+//           body.bank_name,
+//           body.ifsc_code,
+//           body.bank_ac_no,
+//           body.ac_type,
+//           employeeId,
+//         ],
+//       );
+
+//       // =========================================
+//       // UPDATE employee_address
+//       // =========================================
+
+//       console.log("Updating employee_address");
+
+//       await client.query(
+//         `
+//       UPDATE employee_address
+//       SET
+//         permanent_address = $1,
+//         correspondence_address = $2,
+//         pin_code = $3
+//       WHERE employee_id = $4
+//       `,
+//         [
+//           body.permanent_address,
+//           body.correspondence_address,
+//           body.pin_code,
+//           employeeId,
+//         ],
+//       );
+
+//       // =========================================
+//       // COMMIT
+//       // =========================================
+
+//       await client.query("COMMIT");
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Pensioner updated successfully",
+//     });
+//   } catch (error) {
+//     await client.query("ROLLBACK");
+
+//     console.error("UPDATE ERROR:", error);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: error.message || "Internal Server Error",
+//     });
+//   } finally {
+//     client.release();
+//   }
+// }
+
+
+
+
+
+
+
+
+
+
+
 //Admin Routes Functions =======================
 //================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 async function getAdminPendingPensioners(req, res) {
@@ -1018,75 +1986,6 @@ async function handleAdminAllRecords(req, res) {
 }
 
 
-async function handleAdminAction(req, res) {
-  const { ppo_no, action, remark, user } = req.body;
-
-  console.log(req.body)
-
-  if (!ppo_no || !action) {
-    return res.status(400).json({
-      success: false,
-      message: "ppo_no and action are required",
-    });
-  }
-
-  let status;
-
-  try {
-    if(user.role === "super_admin_1")
-    {
-       status =
-        action === "approve"
-          ? "Admin Approved"
-          : action === "reject"
-            ? "Admin Rejected"
-            : null;
-    } else {
-        status =
-        action === "approve"
-          ? "Full Approved"
-          : action === "reject"
-            ? "Full Rejected"
-            : null;
-    }
-
-    if (!status) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid action",
-      });
-    }
-
-    // 🔥 update using PPO number
-    const result = await pool.query(
-      `UPDATE employee_pensioner
-       SET status = $1
-       WHERE ppo_no = $2
-       RETURNING ppo_no, status`,
-      [status, ppo_no],
-    );
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "PPO not found",
-      });
-    }
-
-    res.json({
-      success: true,
-      message: `Pension ${status}`,
-      data: result.rows[0],
-    });
-  } catch (err) {
-    console.error("ACTION ERROR:", err);
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
-  }
-}
-
 
 async function getDepartmentPensioners(req, res) {
   try {
@@ -1160,1067 +2059,6 @@ async function getDepartmentPensioners(req, res) {
     });
   }
 }
-
-// async function updatePensioner(req, res) {
-//   const client = await pool.connect();
-
-//   try {
-//     const { ppo_no } = req.params;
-
-//     console.log("Update Pensioner called with PPO:", ppo_no);
-//     console.log("Request body:", req.body);
-
-//     const body = req.body;
-
-//     // =========================================
-//     // ROLE
-//     // =========================================
-
-//     // token middleware se aayega
-//     // example:
-//     // req.user = { id: 1, role: "Admin" }
-
-//     const {role} = req.body;
-
-//     const editedByRole = role || "Unknown";
-
-//     await client.query("BEGIN");
-
-//     // =========================================
-//     // FIND EMPLOYEE
-//     // =========================================
-
-//     const empRes = await client.query(
-//       `
-//       SELECT id
-//       FROM employee_pensioner
-//       WHERE ppo_no = $1
-//       `,
-//       [ppo_no],
-//     );
-
-//     if (empRes.rows.length === 0) {
-//       await client.query("ROLLBACK");
-
-//       return res.status(404).json({
-//         success: false,
-//         message: "Pensioner not found",
-//       });
-//     }
-
-//     const employeeId = empRes.rows[0].id;
-
-//     // =========================================
-//     // GET DEPARTMENT ID
-//     // =========================================
-
-//     let departmentId = null;
-
-//     if (body.department_name) {
-//       const deptRes = await client.query(
-//         `
-//         SELECT id
-//         FROM departments
-//         WHERE department_name = $1
-//         `,
-//         [body.department_name],
-//       );
-
-//       if (deptRes.rows.length > 0) {
-//         departmentId = deptRes.rows[0].id;
-//       }
-//     }
-
-//     // =========================================
-//     // GET DESIGNATION ID
-//     // =========================================
-
-//     let designationId = null;
-
-//     if (body.designation_name) {
-//       const desigRes = await client.query(
-//         `
-//         SELECT id
-//         FROM designations
-//         WHERE designation_name = $1
-//         `,
-//         [body.designation_name],
-//       );
-
-//       if (desigRes.rows.length > 0) {
-//         designationId = desigRes.rows[0].id;
-//       }
-//     }
-
-//     // =========================================
-//     // UPDATE employee_pensioner
-//     // =========================================
-
-//     await client.query(
-//       `
-//       UPDATE employee_pensioner
-//       SET
-//         employee_id = $1,
-//         employee_name = $2,
-//         aadhaar_no = $3,
-//         pan_no = $4,
-//         date_of_birth = $5,
-//         date_of_joining = $6,
-//         retirement_date = $7,
-//         date_of_death = $8,
-//         gender = $9,
-//         grade_pay = $10,
-//         last_salary_drawn = $11,
-//         caste_category = $12,
-//         relation = $13,
-//         relation_name = $14,
-//         mobile_no = $15,
-//         family_mobile_no = $16,
-//         department_id = $17,
-//         designation_id = $18,
-//         status = $19,
-//         edited_by_role = $20,
-//         edited_at = NOW()
-//       WHERE id = $21
-//       `,
-//       [
-//         body.employee_id,
-//         body.employee_name,
-//         body.aadhaar_no,
-//         body.pan_no,
-//         body.date_of_birth,
-//         body.date_of_joining,
-//         body.retirement_date,
-//         body.date_of_death,
-//         body.gender,
-//         body.grade_pay,
-//         body.last_salary_drawn,
-//         body.caste_category,
-//         body.relation,
-//         body.relation_name,
-//         body.mobile_no,
-//         body.family_mobile_no,
-//         departmentId,
-//         designationId,
-//         body.status,
-//         editedByRole,
-//         employeeId,
-//       ],
-//     );
-
-//     // =========================================
-//     // UPDATE employee_documents
-//     // =========================================
-
-//     await client.query(
-//       `
-//       UPDATE employee_documents
-// SET
-//   photo_path = $1,
-//   signature_path = $2,
-//   salary_slip_path = $3,
-//   death_certificate_path = $4
-// WHERE employee_id = $5
-//       `,
-//       [
-//         body.photo_path,
-//         body.signature_path,
-//         body.salary_slip_path,
-//         body.death_certificate_path,
-//         employeeId,
-//       ],
-//     );
-
-//     // =========================================
-//     // UPDATE pension_category
-//     // =========================================
-
-//     await client.query(
-//       `
-//       UPDATE pension_category
-//       SET
-//         category_type = $1,
-//         acp = $2,
-//         notional_increment = $3,
-//         pfms = $4
-//       WHERE employee_id = $5
-//       `,
-//       [
-//         body.category_type,
-//         body.acp,
-//         body.notional_increment,
-//         body.pfms,
-//         employeeId,
-//       ],
-//     );
-
-//     // =========================================
-//     // UPDATE bank_details
-//     // =========================================
-
-//     await client.query(
-//       `
-//       UPDATE bank_details
-//       SET
-//         bank_name = $1,
-//         ifsc_code = $2,
-//         bank_ac_no = $3,
-//         ac_type = $4
-//       WHERE employee_id = $5
-//       `,
-//       [
-//         body.bank_name,
-//         body.ifsc_code,
-//         body.bank_ac_no,
-//         body.ac_type,
-//         employeeId,
-//       ],
-//     );
-
-//     // =========================================
-//     // UPDATE employee_address
-//     // =========================================
-
-//     await client.query(
-//       `
-//       UPDATE employee_address
-//       SET
-//         permanent_address = $1,
-//         correspondence_address = $2,
-//         pin_code = $3
-//       WHERE employee_id = $4
-//       `,
-//       [
-//         body.permanent_address,
-//         body.correspondence_address,
-//         body.pin_code,
-//         employeeId,
-//       ],
-//     );
-
-//     // =========================================
-//     // COMMIT
-//     // =========================================
-
-//     await client.query("COMMIT");
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Pensioner updated successfully",
-//     });
-//   } catch (error) {
-//     await client.query("ROLLBACK");
-
-//     console.error("UPDATE ERROR:", error);
-
-//     return res.status(500).json({
-//       success: false,
-//       message: error.message || "Internal Server Error",
-//     });
-//   } finally {
-//     client.release();
-//   }
-// }
-
-
-async function updatePensioner(req, res) {
-  const client = await pool.connect();
-
-  try {
-    const ppo_no = req.params.ppo_no?.trim();
-
-    console.log("Update Pensioner called with PPO:", ppo_no);
-    console.log("Request body:", req.body);
-
-    const body = req.body;
-
-    // =========================================
-    // ROLE
-    // =========================================
-
-    const editedByRole = body.updatedUser.role || "Unknown";
-
-    if(editedByRole === "super_admin_1") {
-    
-      await client.query("BEGIN");
-
-      // =========================================
-      // FIND EMPLOYEE
-      // =========================================
-
-      const empRes = await client.query(
-        `
-      SELECT id
-      FROM employee_pensioner
-      WHERE TRIM(ppo_no) = $1
-      `,
-        [ppo_no],
-      );
-
-      if (empRes.rows.length === 0) {
-        await client.query("ROLLBACK");
-
-        return res.status(404).json({
-          success: false,
-          message: "Pensioner not found",
-        });
-      }
-
-      const employeeId = empRes.rows[0].id;
-
-      console.log("EMPLOYEE ID =>", employeeId);
-
-      // =========================================
-      // GET DEPARTMENT ID
-      // =========================================
-
-      let departmentId = null;
-
-      if (body.department_name) {
-        const deptRes = await client.query(
-          `
-        SELECT id
-        FROM departments
-        WHERE department_name = $1
-        `,
-          [body.department_name],
-        );
-
-        if (deptRes.rows.length > 0) {
-          departmentId = deptRes.rows[0].id;
-        }
-      }
-
-      // =========================================
-      // GET DESIGNATION ID
-      // =========================================
-
-      let designationId = null;
-
-      if (body.designation_name) {
-        const desigRes = await client.query(
-          `
-        SELECT id
-        FROM designations
-        WHERE designation_name = $1
-        `,
-          [body.designation_name],
-        );
-
-        if (desigRes.rows.length > 0) {
-          designationId = desigRes.rows[0].id;
-        }
-      }
-
-      // =========================================
-      // UPDATE employee_pensioner
-      // =========================================
-
-      console.log("Updating employee_pensioner");
-
-      await client.query(
-        `
-      UPDATE employee_pensioner
-      SET
-        employee_id = $1,
-        employee_name = $2,
-        aadhaar_no = $3,
-        pan_no = $4,
-        date_of_birth = $5,
-        date_of_joining = $6,
-        retirement_date = $7,
-        date_of_death = $8,
-        gender = $9,
-        grade_pay = $10,
-        last_salary_drawn = $11,
-        caste_category = $12,
-        relation = $13,
-        relation_name = $14,
-        mobile_no = $15,
-        family_mobile_no = $16,
-        department_id = $17,
-        designation_id = $18,
-        "status" = $19,
-        edited_by_role = $20,
-        edited_at = NOW()
-      WHERE id = $21
-      `,
-        [
-          body.employee_id,
-          body.employee_name,
-          body.aadhaar_no,
-          body.pan_no,
-          body.date_of_birth,
-          body.date_of_joining,
-          body.retirement_date,
-          body.date_of_death,
-          body.gender,
-          body.grade_pay,
-          body.last_salary_drawn,
-          body.caste_category,
-          body.relation,
-          body.relation_name,
-          body.mobile_no,
-          body.family_mobile_no,
-          departmentId,
-          designationId,
-          body.status,
-          editedByRole,
-          employeeId,
-        ],
-      );
-
-      // =========================================
-      // UPDATE employee_documents
-      // =========================================
-
-      console.log("Updating employee_documents");
-
-      await client.query(
-        `
-      UPDATE employee_documents
-      SET
-        photo_path = $1,
-        signature_path = $2,
-        salary_slip_path = $3,
-        death_certificate_path = $4
-      WHERE employee_id = $5
-      `,
-        [
-          body.photo_path,
-          body.signature_path,
-          body.salary_slip_path,
-          body.death_certificate_path,
-          employeeId,
-        ],
-      );
-
-      // =========================================
-      // UPDATE pension_category
-      // =========================================
-
-      console.log("Updating pension_category");
-
-      await client.query(
-        `
-      UPDATE pension_category
-      SET
-        category_type = $1,
-        acp = $2,
-        notional_increment = $3,
-        pfms = $4
-      WHERE employee_id = $5
-      `,
-        [
-          body.category_type,
-          body.acp,
-          body.notional_increment,
-          body.pfms,
-          employeeId,
-        ],
-      );
-
-      // =========================================
-      // UPDATE bank_details
-      // =========================================
-
-      console.log("Updating bank_details");
-
-      await client.query(
-        `
-      UPDATE bank_details
-      SET
-        bank_name = $1,
-        ifsc_code = $2,
-        bank_ac_no = $3,
-        ac_type = $4
-      WHERE employee_id = $5
-      `,
-        [
-          body.bank_name,
-          body.ifsc_code,
-          body.bank_ac_no,
-          body.ac_type,
-          employeeId,
-        ],
-      );
-
-      // =========================================
-      // UPDATE employee_address
-      // =========================================
-
-      console.log("Updating employee_address");
-
-      await client.query(
-        `
-      UPDATE employee_address
-      SET
-        permanent_address = $1,
-        correspondence_address = $2,
-        pin_code = $3
-      WHERE employee_id = $4
-      `,
-        [
-          body.permanent_address,
-          body.correspondence_address,
-          body.pin_code,
-          employeeId,
-        ],
-      );
-
-      // =========================================
-      // COMMIT
-      // =========================================
-
-      await client.query("COMMIT");
-
-
-    } else {
-      await client.query("BEGIN");
-
-      // =========================================
-      // FIND EMPLOYEE
-      // =========================================
-
-      const empRes = await client.query(
-        `
-      SELECT id
-      FROM employee_pensioner
-      WHERE TRIM(ppo_no) = $1
-      `,
-        [ppo_no],
-      );
-
-      if (empRes.rows.length === 0) {
-        await client.query("ROLLBACK");
-
-        return res.status(404).json({
-          success: false,
-          message: "Pensioner not found",
-        });
-      }
-
-      const employeeId = empRes.rows[0].id;
-
-      console.log("EMPLOYEE ID =>", employeeId);
-
-      // =========================================
-      // GET DEPARTMENT ID
-      // =========================================
-
-      let departmentId = null;
-
-      if (body.department_name) {
-        const deptRes = await client.query(
-          `
-        SELECT id
-        FROM departments
-        WHERE department_name = $1
-        `,
-          [body.department_name],
-        );
-
-        if (deptRes.rows.length > 0) {
-          departmentId = deptRes.rows[0].id;
-        }
-      }
-
-      // =========================================
-      // GET DESIGNATION ID
-      // =========================================
-
-      let designationId = null;
-
-      if (body.designation_name) {
-        const desigRes = await client.query(
-          `
-        SELECT id
-        FROM designations
-        WHERE designation_name = $1
-        `,
-          [body.designation_name],
-        );
-
-        if (desigRes.rows.length > 0) {
-          designationId = desigRes.rows[0].id;
-        }
-      }
-
-      // =========================================
-      // UPDATE employee_pensioner
-      // =========================================
-
-      console.log("Updating employee_pensioner");
-
-      await client.query(
-        `
-      UPDATE employee_pensioner
-      SET
-        employee_id = $1,
-        employee_name = $2,
-        aadhaar_no = $3,
-        pan_no = $4,
-        date_of_birth = $5,
-        date_of_joining = $6,
-        retirement_date = $7,
-        date_of_death = $8,
-        gender = $9,
-        grade_pay = $10,
-        last_salary_drawn = $11,
-        caste_category = $12,
-        relation = $13,
-        relation_name = $14,
-        mobile_no = $15,
-        family_mobile_no = $16,
-        department_id = $17,
-        designation_id = $18,
-        "status" = $19,
-        edited_by_cfo = $20,
-        edited_at = NOW()
-      WHERE id = $21
-      `,
-        [
-          body.employee_id,
-          body.employee_name,
-          body.aadhaar_no,
-          body.pan_no,
-          body.date_of_birth,
-          body.date_of_joining,
-          body.retirement_date,
-          body.date_of_death,
-          body.gender,
-          body.grade_pay,
-          body.last_salary_drawn,
-          body.caste_category,
-          body.relation,
-          body.relation_name,
-          body.mobile_no,
-          body.family_mobile_no,
-          departmentId,
-          designationId,
-          body.status,
-          editedByRole,
-          employeeId,
-        ],
-      );
-
-      // =========================================
-      // UPDATE employee_documents
-      // =========================================
-
-      console.log("Updating employee_documents");
-
-      await client.query(
-        `
-      UPDATE employee_documents
-      SET
-        photo_path = $1,
-        signature_path = $2,
-        salary_slip_path = $3,
-        death_certificate_path = $4
-      WHERE employee_id = $5
-      `,
-        [
-          body.photo_path,
-          body.signature_path,
-          body.salary_slip_path,
-          body.death_certificate_path,
-          employeeId,
-        ],
-      );
-
-      // =========================================
-      // UPDATE pension_category
-      // =========================================
-
-      console.log("Updating pension_category");
-
-      await client.query(
-        `
-      UPDATE pension_category
-      SET
-        category_type = $1,
-        acp = $2,
-        notional_increment = $3,
-        pfms = $4
-      WHERE employee_id = $5
-      `,
-        [
-          body.category_type,
-          body.acp,
-          body.notional_increment,
-          body.pfms,
-          employeeId,
-        ],
-      );
-
-      // =========================================
-      // UPDATE bank_details
-      // =========================================
-
-      console.log("Updating bank_details");
-
-      await client.query(
-        `
-      UPDATE bank_details
-      SET
-        bank_name = $1,
-        ifsc_code = $2,
-        bank_ac_no = $3,
-        ac_type = $4
-      WHERE employee_id = $5
-      `,
-        [
-          body.bank_name,
-          body.ifsc_code,
-          body.bank_ac_no,
-          body.ac_type,
-          employeeId,
-        ],
-      );
-
-      // =========================================
-      // UPDATE employee_address
-      // =========================================
-
-      console.log("Updating employee_address");
-
-      await client.query(
-        `
-      UPDATE employee_address
-      SET
-        permanent_address = $1,
-        correspondence_address = $2,
-        pin_code = $3
-      WHERE employee_id = $4
-      `,
-        [
-          body.permanent_address,
-          body.correspondence_address,
-          body.pin_code,
-          employeeId,
-        ],
-      );
-
-      // =========================================
-      // COMMIT
-      // =========================================
-
-      await client.query("COMMIT");
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Pensioner updated successfully",
-    });
-  } catch (error) {
-    await client.query("ROLLBACK");
-
-    console.error("UPDATE ERROR:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Internal Server Error",
-    });
-  } finally {
-    client.release();
-  }
-}
-
-
-
-
-
-// async function updatePensioner(req, res) {
-//   const client = await pool.connect();
-
-//   try {
-//     const { ppoNo } = req.params;
-
-//     // frontend se aa raha role
-//     const { role } = req.body;
-
-//     const body = req.body;
-
-//     await client.query("BEGIN");
-
-//     // =========================================
-//     // GET EMPLOYEE
-//     // =========================================
-
-//     const empRes = await client.query(
-//       `
-//       SELECT *
-//       FROM employee_pensioner
-//       WHERE ppo_no = $1
-//       `,
-//       [ppoNo],
-//     );
-
-//     if (empRes.rows.length === 0) {
-//       throw new Error("Pensioner not found");
-//     }
-
-//     const employee = empRes.rows[0];
-
-//     // =========================================
-//     // ADMIN RE-EDIT BLOCK
-//     // =========================================
-
-//     if (employee.edited_by_role === "admin" && role === "admin") {
-//       return res.status(403).json({
-//         success: false,
-//         message: "Admin already edited this record",
-//       });
-//     }
-
-//     // =========================================
-//     // GET DEPARTMENT ID
-//     // =========================================
-
-//     let departmentId = employee.department_id;
-
-//     if (body.department) {
-//       const deptRes = await client.query(
-//         `
-//         SELECT id
-//         FROM departments
-//         WHERE department_name = $1
-//         `,
-//         [body.department],
-//       );
-
-//       if (deptRes.rows.length === 0) {
-//         throw new Error("Invalid department");
-//       }
-
-//       departmentId = deptRes.rows[0].id;
-//     }
-
-//     // =========================================
-//     // GET DESIGNATION ID
-//     // =========================================
-
-//     let designationId = employee.designation_id;
-
-//     if (body.designation) {
-//       const desigRes = await client.query(
-//         `
-//         SELECT id
-//         FROM designations
-//         WHERE designation_name = $1
-//         `,
-//         [body.designation],
-//       );
-
-//       if (desigRes.rows.length === 0) {
-//         throw new Error("Invalid designation");
-//       }
-
-//       designationId = desigRes.rows[0].id;
-//     }
-
-//     // =========================================
-//     // UPDATE employee_pensioner
-//     // =========================================
-
-//     await client.query(
-//       `
-//       UPDATE employee_pensioner
-//       SET
-//         department_id = $1,
-//         designation_id = $2,
-//         aadhaar_no = $3,
-//         pan_no = $4,
-//         mobile_no = $5,
-//         employee_name = $6,
-//         retirement_date = $7,
-//         edited_by_role = $8,
-//         edited_at = NOW()
-//       WHERE id = $9
-//       `,
-//       [
-//         departmentId,
-//         designationId,
-//         body.aadhaar,
-//         body.pan,
-//         body.mobile,
-//         body.employeeName,
-//         body.retirementDate,
-//         role,
-//         employee.id,
-//       ],
-//     );
-
-//     // =========================================
-//     // UPDATE BANK DETAILS
-//     // =========================================
-
-//     await client.query(
-//       `
-//       UPDATE bank_details
-//       SET
-//         bank_name = $1,
-//         ifsc_code = $2,
-//         micr = $3,
-//         bank_ac_no = $4,
-//         ac_type = $5
-//       WHERE employee_id = $6
-//       `,
-//       [
-//         body.bankName,
-//         body.ifsc,
-//         body.micr,
-//         body.acNo,
-//         body.acType,
-//         employee.id,
-//       ],
-//     );
-
-//     // =========================================
-//     // UPDATE ADDRESS
-//     // =========================================
-
-//     await client.query(
-//       `
-//       UPDATE employee_address
-//       SET
-//         permanent_address = $1,
-//         correspondence_address = $2,
-//         pin_code = $3
-//       WHERE employee_id = $4
-//       `,
-//       [body.permAddress, body.corrAddress, body.pinCode, employee.id],
-//     );
-
-//     // =========================================
-//     // UPDATE CATEGORY
-//     // =========================================
-
-//     await client.query(
-//       `
-//       UPDATE pension_category
-//       SET
-//         category_type = $1,
-//         acp = $2,
-//         notional_increment = $3,
-//         pfms = $4
-//       WHERE employee_id = $5
-//       `,
-//       [
-//         body.categoryType,
-//         body.acp === "Y",
-//         body.notionalIncrement === "Y",
-//         body.pfms,
-//         employee.id,
-//       ],
-//     );
-
-//     // =========================================
-//     // UPDATE DOCUMENTS
-//     // =========================================
-
-//     if (req.files) {
-//       const photoUrl = req.files?.photo?.[0]?.path || null;
-
-//       const signatureUrl = req.files?.signature?.[0]?.path || null;
-
-//       const salarySlipUrl = req.files?.salarySlip?.[0]?.path || null;
-
-//       const deathCertificateUrl =
-//         req.files?.deathCertificate?.[0]?.path || null;
-
-//       await client.query(
-//         `
-//         UPDATE employee_documents
-//         SET
-//           photo_path =
-//             COALESCE($1, photo_path),
-
-//           signature_path =
-//             COALESCE($2, signature_path),
-
-//           salary_slip_path =
-//             COALESCE($3, salary_slip_path),
-
-//           death_certificate_path =
-//             COALESCE($4, death_certificate_path)
-
-//         WHERE employee_id = $5
-//         `,
-//         [
-//           photoUrl,
-//           signatureUrl,
-//           salarySlipUrl,
-//           deathCertificateUrl,
-//           employee.id,
-//         ],
-//       );
-//     }
-
-//     // =========================================
-//     // COMMIT
-//     // =========================================
-
-//     await client.query("COMMIT");
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Pensioner updated successfully",
-//     });
-//   } catch (err) {
-//     await client.query("ROLLBACK");
-
-//     console.error(err);
-
-//     return res.status(500).json({
-//       success: false,
-//       message: err.message || "Server Error",
-//     });
-//   } finally {
-//     client.release();
-//   }
-// }
-
-
-// function updatePensioner(req, res) {
-//   // console.log("Update Pensioner called with ID:", req.params.id);
-//   // console.log("Request body:", req.body);
-
-//   // try {
-//   //   const { pensioners } = getCollections();
-//   //   const { id } = req.params;
-
-//   //   let pensioner =
-//   //     pensioners.findOne({ ppoNumber: id }) ||
-//   //     pensioners.findOne({ employeeId: id });
-//   //   if (!pensioner)
-//   //     return res
-//   //       .status(404)
-//   //       .json({ success: false, message: "Pensioner not found" });
-
-//   //   // Protect immutable fields
-//   //   const { ppoNumber, employeeId, createdAt, createdBy, ...updateData } =
-//   //     req.body;
-
-//   //   Object.assign(pensioner, updateData, {
-//   //     updatedAt: new Date().toISOString(),
-//   //     updatedBy: req.user.username,
-//   //   });
-//   //   pensioners.update(pensioner);
-
-//   //   res.json({
-//   //     success: true,
-//   //     message: "Pensioner updated",
-//   //     data: sanitizePensioner(pensioner),
-//   //   });
-//   // } catch (err) {
-//   //   res.status(500).json({ success: false, message: "Server error" });
-//   // }
-// }
-
-// ── GET /api/pensioners/stats ─────────────────────────────────────────────────
-
 
 
 
