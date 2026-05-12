@@ -10,6 +10,7 @@ const {
   handleAdminAllRecords,
   handleAdminAction,
   updatePensioner,
+  downloadActivityLogsCSV,
   getStats,
 } = require("../controllers/pensionerController");
 const multer = require("multer");
@@ -66,6 +67,16 @@ router.get("/admin/records", handleAdminAllRecords);
 
 //============= Admin can approve or reject pensioner applications  =============//
 router.post("/action", handleAdminAction);
+
+
+
+
+
+
+
+
+// ============  CFO Download pensioner data in CSV format  ============//
+   router.get("/activity-logs/download", downloadActivityLogsCSV);
 
 
 
