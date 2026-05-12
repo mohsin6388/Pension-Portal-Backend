@@ -7,10 +7,13 @@ const {
   createPensioner,
   getDepartmentPensioners,
   getAdminPendingPensioners,
+  getAdminPendingPensionersByRole,
   handleAdminAllRecords,
   handleAdminAction,
   updatePensioner,
   downloadActivityLogsCSV,
+  getFullApprovedPensioners,
+  getDepartmentPensionersByAdmin,
   getStats,
 } = require("../controllers/pensionerController");
 const multer = require("multer");
@@ -41,7 +44,6 @@ router.get("/", listPensioners);
 
 // =========== Operator, Admin, and CFO can view particular employee pension details  =========== //
 router.get("/:id",  authenticate,
-
   // authorize("operator", "super_admin_1", "super_admin_2"), 
   getPensionerById);
 
@@ -51,6 +53,11 @@ router.get("/:id",  authenticate,
 
 // =========== Admin can view pending pensioners for approval  =========== //
 router.get("/admin/pending", getAdminPendingPensioners);
+
+
+
+//========= Admin wise pensioner pending  detail ===========//
+router.get("/admin/pending/:role", getAdminPendingPensionersByRole);
 
 
 
@@ -84,6 +91,26 @@ router.post("/action", handleAdminAction);
 
 
 
+// ===========  All FUll Approved PPO ===============================
+
+router.get("/approved/all", getFullApprovedPensioners);
+
+
+
+// ============ Department-wise pensioner stats for Admin Dashboard ===============================
+router.get("/department/:departmentId", getDepartmentPensioners);
+
+
+
+
+// ============ Department-wise pensioner stats for Admin Dashboard (Admin-only) ===============================
+
+router.get("/admin/department/:departmentId", getDepartmentPensionersByAdmin);
+
+
+
+
+
 
 
 
@@ -112,8 +139,6 @@ router.post("/action", handleAdminAction);
 // router.use(authenticate);
 
 router.get("/stats", getStats);
-
-router.get("/department/:departmentId", getDepartmentPensioners);
 
 router.put("/update/:ppo_no",
   //  authorize("admin", "clerk"), auditLog("UPDATE_PENSIONER"), 
