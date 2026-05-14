@@ -51,18 +51,6 @@ router.get("/:id",  authenticate,
 
 
 
-// =========== Admin can view pending pensioners for approval  =========== //
-router.get("/admin/pending", getAdminPendingPensioners);
-
-
-
-//========= Admin wise pensioner pending  detail ===========//
-router.get("/admin/pending/:role", getAdminPendingPensionersByRole);
-
-
-
-
-
 
 // =========== Admin can view all pensioner records for management  =========== //
 router.get("/admin/records", handleAdminAllRecords);
@@ -110,31 +98,6 @@ router.get("/admin/department/:departmentId", getDepartmentPensionersByAdmin);
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // All pensioner routes require authentication
 // router.use(authenticate);
 
@@ -143,5 +106,53 @@ router.get("/stats", getStats);
 router.put("/update/:ppo_no",
   //  authorize("admin", "clerk"), auditLog("UPDATE_PENSIONER"), 
    updatePensioner);
+
+
+
+
+
+
+
+
+
+
+
+
+//==================================================================================================================
+//===================================================================================================================
+//                        ADMIN AND SUPER ADMIN ROUTES
+//===================================================================================================================
+//===================================================================================================================
+
+
+
+
+// =========== Admin can view pending pensioners for approval  =========== //
+// router.get("/admin/pending", getAdminPendingPensioners);
+
+
+
+//========= Admin wise pensioner pending  detail ===========//
+router.get("/admin/pending", getAdminPendingPensionersByRole);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 module.exports = router;
