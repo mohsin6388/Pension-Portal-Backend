@@ -133,7 +133,7 @@ router.put("/update/:ppo_no",
 
 
 //========= Admin wise pensioner pending  detail ===========//
-router.get("/admin/pending", getAdminPendingPensionersByRole);
+router.get("/admin/pending/:role", getAdminPendingPensionersByRole);
 
 
 

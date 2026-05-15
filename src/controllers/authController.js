@@ -154,15 +154,6 @@ async function login(req, res, next) {
       return res.status(403).json({ message: "Account is deactivated" });
     }
 
-    // const isMatch = await bcrypt.compare(
-    //   password_hash,
-    //   user.password_hash
-    // );
-
-    // if (!isMatch) {
-    //   return res.status(401).json({ message: "Invalid credentials" });
-    // }
-
     // update last login
     await pool.query(`UPDATE users SET last_login = NOW() WHERE id = $1`, [
       user.id,

@@ -610,9 +610,9 @@ function listPensioners(req, res) {
 async function getPensionerById(req, res) {
   const { id } = req.params;
 
-  //  console.log("ROLE =>", req.headers["x-user-role"]);
+   console.log("ROLE =>", req.headers["x-user-role"]);
 
-  //  console.log("USER ID =>", req.headers["x-user-id"]);
+   console.log("USER ID =>", req.headers["x-user-id"]);
 
   try {
     const query = `
@@ -628,11 +628,18 @@ async function getPensionerById(req, res) {
         ed.salary_slip_path,
         ed.death_certificate_path,
 
+        ep.sub_department,
+        ep.basic_salary,
+        ep.pay_commission,
+
         -- PENSION CATEGORY
         pc.category_type,
         pc.acp,
         pc.notional_increment,
         pc.pfms,
+        pc.acp1,
+        pc.acp2,
+        pc.acp3,
 
         -- BANK DETAILS
         bd.bank_name,
