@@ -41,21 +41,6 @@ async function createPensioner(req, res) {
   try {
     const body = req.body;
 
-    // =========================
-    // ✅ Basic validation
-    // =========================
-    // if (
-    //   !body.employeeId ||
-    //   !body.department ||
-    //   !body.designation ||
-    //   !body.employeeName
-    // ) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: "Missing required fields",
-    //   });
-    // }
-
     await client.query("BEGIN");
 
     // =========================
@@ -743,202 +728,6 @@ async function getPensionerById(req, res) {
 
 
 
-//===================================== Admin, Super Admin Routes =======================================================
-async function handleAdminAction(req, res) {
-  const { ppo_no, action, remark, user } = req.body;
-
-  console.log(req.body);
-
-
-  const logRole =
-    user.role === "super_admin_1"
-      ? "Accountant"
-      : user.role === "super_admin_2"
-        ? "CFO"
-        : user.role;
-
-
-  if (!ppo_no || !action) {
-    return res.status(400).json({
-      success: false,
-      message: "ppo_no and action are required",
-    });
-  }
-
-  const oldDataRes = await pool.query(
-    `
-  SELECT id, employee_name, status
-  FROM employee_pensioner
-  WHERE ppo_no = $1
-  `,
-    [ppo_no],
-  );
-
-  if (oldDataRes.rows.length === 0) {
-    return res.status(404).json({
-      success: false,
-      message: "PPO not found",
-    });
-  }
-  
-  const oldData = oldDataRes.rows[0];
-
-  let status;
-  let remarkColumn;
-
-  try {
-    // if (user.role === "super_admin_1") {
-    //   status =
-    //     action === "approve"
-    //       ? "Admin Approved"
-    //       : action === "reject"
-    //         ? "Admin Rejected"
-    //         : null;
-    // } else {
-    //   status =
-    //     action === "approve"
-    //       ? "Full Approved"
-    //       : action === "reject"
-    //         ? "Full Rejected"
-    //         : null;
-    // }
-
-    // if (!status) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: "Invalid action",
-    //   });
-    // }
-
-    // // 🔥 update using PPO number
-    // const result = await pool.query(
-    //   `UPDATE employee_pensioner
-    //    SET status = $1
-    //    WHERE ppo_no = $2
-    //    RETURNING ppo_no, status`,
-    //   [status, ppo_no],
-    // );
-
-    // if (result.rowCount === 0) {
-    //   return res.status(404).json({
-    //     success: false,
-    //     message: "PPO not found",
-    //   });
-    // }
-
-    // ✅ role based status + remark column
-    if (user.role === "super_admin_1") {
-      status =
-        action === "approve"
-          ? "Admin Approved"
-          : action === "reject"
-            ? "Admin Rejected"
-            : null;
-
-      remarkColumn = "accountant_remark";
-    } else if (user.role === "super_admin_2") {
-      status =
-        action === "approve"
-          ? "Full Approved"
-          : action === "reject"
-            ? "Full Rejected"
-            : null;
-
-      remarkColumn = "cfo_remark";
-    }
-
-    if (!status) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid action",
-      });
-    }
-
-    // ✅ update status + dynamic remark column
-    const result = await pool.query(
-      `
-    UPDATE employee_pensioner
-    SET status = $1,
-        ${remarkColumn} = $2
-    WHERE ppo_no = $3
-    RETURNING ppo_no, status, ${remarkColumn}
-    `,
-      [status, remark || null, ppo_no],
-    );
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "PPO not found",
-      });
-    }
-
-    // ==================================
-    //  Activity Log - Approve/Reject Action
-    // ==================================
-
-    await pool.query(
-      `
-  INSERT INTO activity_logs (
-    user_id,
-    user_role,
-    action,
-    module,
-    target_id,
-    changes,
-    message,
-    ip_address,
-    user_agent
-  )
-  VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-  `,
-      [
-        user.id,
-
-        logRole,
-
-        action === "approve" ? "APPROVE" : "REJECT",
-
-        "employee_pensioner",
-
-        oldData.id,
-
-        JSON.stringify({
-          status: {
-            old: oldData.status,
-            new: status,
-          },
-          remark: remark || null,
-        }),
-
-        `${logRole} ${action}ed pensioner ${oldData.employee_name}`,
-
-        req.ip,
-
-        req.headers["user-agent"],
-      ],
-    );
-
-    // ==================================
-    //  Activity Log - Approve/Reject Action
-    //              END
-    // ==================================
-
-    res.json({
-      success: true,
-      message: `Pension ${status}`,
-      data: result.rows[0],
-    });
-  } catch (err) {
-    console.error("ACTION ERROR:", err);
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
-  }
-}
-
-
 
 
 //============================= Update Pensioner By PPO Number (Admin and Super Admin Edit) ============================
@@ -1339,6 +1128,204 @@ async function updatePensioner(req, res) {
 
 
 
+//===================================== Admin, Super Admin Routes =======================================================
+async function handleAdminAction(req, res) {
+  const { ppo_no, action, remark, user } = req.body;
+
+  console.log(req.body);
+
+
+  const logRole =
+    user.role === "super_admin_1"
+      ? "Accountant"
+      : user.role === "super_admin_2"
+        ? "CFO"
+        : user.role;
+
+
+  if (!ppo_no || !action) {
+    return res.status(400).json({
+      success: false,
+      message: "ppo_no and action are required",
+    });
+  }
+
+  const oldDataRes = await pool.query(
+    `
+  SELECT id, employee_name, status
+  FROM employee_pensioner
+  WHERE ppo_no = $1
+  `,
+    [ppo_no],
+  );
+
+  if (oldDataRes.rows.length === 0) {
+    return res.status(404).json({
+      success: false,
+      message: "PPO not found",
+    });
+  }
+  
+  const oldData = oldDataRes.rows[0];
+
+  let status;
+  let remarkColumn;
+
+  try {
+    // if (user.role === "super_admin_1") {
+    //   status =
+    //     action === "approve"
+    //       ? "Admin Approved"
+    //       : action === "reject"
+    //         ? "Admin Rejected"
+    //         : null;
+    // } else {
+    //   status =
+    //     action === "approve"
+    //       ? "Full Approved"
+    //       : action === "reject"
+    //         ? "Full Rejected"
+    //         : null;
+    // }
+
+    // if (!status) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Invalid action",
+    //   });
+    // }
+
+    // // 🔥 update using PPO number
+    // const result = await pool.query(
+    //   `UPDATE employee_pensioner
+    //    SET status = $1
+    //    WHERE ppo_no = $2
+    //    RETURNING ppo_no, status`,
+    //   [status, ppo_no],
+    // );
+
+    // if (result.rowCount === 0) {
+    //   return res.status(404).json({
+    //     success: false,
+    //     message: "PPO not found",
+    //   });
+    // }
+
+    // ✅ role based status + remark column
+    if (user.role === "super_admin_1") {
+      status =
+        action === "approve"
+          ? "Admin Approved"
+          : action === "reject"
+            ? "Admin Rejected"
+            : null;
+
+      remarkColumn = "accountant_remark";
+    } else if (user.role === "super_admin_2") {
+      status =
+        action === "approve"
+          ? "Full Approved"
+          : action === "reject"
+            ? "Full Rejected"
+            : null;
+
+      remarkColumn = "cfo_remark";
+    }
+
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid action",
+      });
+    }
+
+    // ✅ update status + dynamic remark column
+    const result = await pool.query(
+      `
+    UPDATE employee_pensioner
+    SET status = $1,
+        ${remarkColumn} = $2
+    WHERE ppo_no = $3
+    RETURNING ppo_no, status, ${remarkColumn}
+    `,
+      [status, remark || null, ppo_no],
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "PPO not found",
+      });
+    }
+
+    // ==================================
+    //  Activity Log - Approve/Reject Action
+    // ==================================
+
+    await pool.query(
+      `
+  INSERT INTO activity_logs (
+    user_id,
+    user_role,
+    action,
+    module,
+    target_id,
+    changes,
+    message,
+    ip_address,
+    user_agent
+  )
+  VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+  `,
+      [
+        user.id,
+
+        logRole,
+
+        action === "approve" ? "APPROVE" : "REJECT",
+
+        "employee_pensioner",
+
+        oldData.id,
+
+        JSON.stringify({
+          status: {
+            old: oldData.status,
+            new: status,
+          },
+          remark: remark || null,
+        }),
+
+        `${logRole} ${action}ed pensioner ${oldData.employee_name}`,
+
+        req.ip,
+
+        req.headers["user-agent"],
+      ],
+    );
+
+    // ==================================
+    //  Activity Log - Approve/Reject Action
+    //              END
+    // ==================================
+
+    res.json({
+      success: true,
+      message: `Pension ${status}`,
+      data: result.rows[0],
+    });
+  } catch (err) {
+    console.error("ACTION ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+}
+
+
+
+
 //========================== Download Activity Logs (Super Admin) ============================
 
 async function downloadActivityLogsCSV(req, res) {
@@ -1495,7 +1482,7 @@ async function getFullApprovedPensioners(req, res) {
       LEFT JOIN bank_details bd ON ep.id = bd.employee_id
       LEFT JOIN employee_address addr ON ep.id = addr.employee_id
       LEFT JOIN pension_category pc ON ep.id = pc.employee_id
-      WHERE ep.status = 'approved'
+      WHERE ep.status = 'Full Approved'
     `;
 
     const queryParams = [];
@@ -1547,6 +1534,8 @@ async function getFullApprovedPensioners(req, res) {
     client.release();
   }
 }
+
+
 
 
 // ============= Admin and Super Admin - Get All Records (For Admin Dashboard) - With Filters, Search, Pagination ===============
@@ -2361,6 +2350,11 @@ function sanitizePensioner(p) {
   const { $loki, meta, ...rest } = p;
   return { ...rest, id: $loki };
 }
+
+
+
+
+
 
 module.exports = {
   listPensioners,

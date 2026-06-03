@@ -12,6 +12,7 @@ const pensionerRoutes      = require("./src/routes/pensioners");
 const pensionActionRoutes  = require("./src/routes/pensionActions");
 const userRoutes           = require("./src/routes/users");
 const documentRoutes       = require("./src/routes/documents");
+const administratorRoutes        = require("./src/routes/administrator");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -26,6 +27,7 @@ app.use(cors({
   origin: "*",
   credentials: true,
 }));
+
 
 app.set("trust proxy", 1);
 app.use(express.json({ limit: "10mb" }));
@@ -45,6 +47,7 @@ app.use("/api/pensioners",      pensionerRoutes);
 app.use("/api/pension-actions", pensionActionRoutes);
 app.use("/api/users",           userRoutes);
 app.use("/api/documents",       documentRoutes);
+app.use("/api/administrator", administratorRoutes)
 
 // Health check
 app.get("/api/health", (req, res) => {
