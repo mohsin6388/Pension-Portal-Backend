@@ -8,7 +8,8 @@ const { Pool } = require("pg");
 
 const pool = new Pool({
   connectionString:
-    "postgresql://pension_system_user:wHeVesZgDg7wgkzYA3lQvDPwzThXYjt4@dpg-d7sej9navr4c73ame5dg-a.oregon-postgres.render.com/pension_system",
+    // "postgresql://pension_system_user:wHeVesZgDg7wgkzYA3lQvDPwzThXYjt4@dpg-d7sej9navr4c73ame5dg-a.oregon-postgres.render.com/pension_system",
+    "postgresql://deific_digital_user:4oeNkt7LeA84XrFtjud0RS1NFRV66kLM@dpg-d8ggkk9kh4rs73am2nu0-a.oregon-postgres.render.com/Pension_System",
   ssl: {
     rejectUnauthorized: false,
   },
