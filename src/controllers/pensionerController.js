@@ -3,23 +3,7 @@ const cloudinary = require("../config/cloudinary");
 const { Pool } = require("pg");
 const createActivityLog = require("../utils/activityLogger");
 const { Parser } = require("json2csv");
-
-const pool = new Pool({
-  connectionString:
-    "postgresql://deific_digital_user:4oeNkt7LeA84XrFtjud0RS1NFRV66kLM@dpg-d8ggkk9kh4rs73am2nu0-a.oregon-postgres.render.com/Pension_System",
-  ssl: {
-    rejectUnauthorized: false,
-  },
-});
-
-pool.on("connect", () => {
-  console.log("✅ Connected to PostgreSQL database");
-});
-
-pool.on("error", (err) => {
-  console.error("❌ Unexpected error on idle client", err);
-  process.exit(-1);
-});
+const pool = require("../config/database");
 
 
 
