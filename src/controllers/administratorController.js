@@ -3,29 +3,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { v4: uuidv4 } = require("uuid");
 const generateToken = require("../middleware/authToken");
-
-const { Pool } = require("pg");
-
-const pool = new Pool({
-  connectionString:
-    // "postgresql://pension_system_user:wHeVesZgDg7wgkzYA3lQvDPwzThXYjt4@dpg-d7sej9navr4c73ame5dg-a.oregon-postgres.render.com/pension_system",
-    "postgresql://deific_digital_user:4oeNkt7LeA84XrFtjud0RS1NFRV66kLM@dpg-d8ggkk9kh4rs73am2nu0-a.oregon-postgres.render.com/Pension_System",
-  ssl: {
-    rejectUnauthorized: false,
-  },
-});
-
-pool.on("connect", () => {
-  console.log("✅ Connected to PostgreSQL database");
-});
-
-pool.on("error", (err) => {
-  console.error("❌ Unexpected error on idle client", err);
-  process.exit(-1);
-});
-
-
-
+const pool = require("../config/database");
 
 
 
