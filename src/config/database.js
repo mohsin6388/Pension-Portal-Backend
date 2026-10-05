@@ -1,24 +1,21 @@
+require("dotenv").config();
 const { Pool } = require("pg");
 
 const pool = new Pool({
-  host: "localhost",
-  port:  5432,
-  database: "Pension_System",
-  user: "postgres",
-  // password: process.env.DB_PASSWORD || '',
-  password: "Mohsin@123",
-  max: 20,
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+  max: 10,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000,
 });
 
 pool.on("connect", () => {
   console.log("✅ Connected to PostgreSQL database");
 });
 
+// Neon idle connections tod sakta hai, isliye yahan exit mat karo
 pool.on("error", (err) => {
-  console.error("❌ Unexpected error on idle client", err);
-  process.exit(-1);
+  console.error("❌ Unexpected error on idle client", err.message);
 });
 
 module.exports = pool;
